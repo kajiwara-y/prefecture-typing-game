@@ -74,9 +74,12 @@ class GameStateManager {
     return remaining[Math.floor(Math.random() * remaining.length)]
   }
 
-  subscribe(listener: (state: GameState) => void) {
+  // 修正: voidを返すunsubscribe関数に変更
+  subscribe(listener: (state: GameState) => void): () => void {
     this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
   }
 
   getState(): GameState {
