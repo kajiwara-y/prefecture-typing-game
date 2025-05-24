@@ -1,14 +1,27 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useGameState } from '../hooks/useGameState'
+import { useScrollPreservation } from '../hooks/useScrollPreservation'
 
 export default function TypingInput() {
   const { gameState, startGame, answerCorrect, getNextPrefecture, isClient } = useGameState()
+  const { preserveScrollDuring } = useScrollPreservation()
   const [input, setInput] = useState('')
   const [feedback, setFeedback] = useState('')
   const [isCorrect, setIsCorrect] = useState(false)
   const [showAnswer, setShowAnswer] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const targetPrefecture = gameState.currentPrefecture
+
+  // 問題が変わったときにフォーカスを戻す
+  useEffect(() => {
+    if (isClient && inputRef.current && !isCorrect && !showAnswer) {
+      // 少し遅延させてフォーカス
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+    }
+  }, [targetPrefecture.id, isClient, isCorrect, showAnswer])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,20 +42,27 @@ export default function TypingInput() {
       setIsCorrect(true)
       answerCorrect(targetPrefecture.id)
       
+      // スクロール位置を保持したまま次の問題へ
       setTimeout(() => {
         if (!gameState.isGameComplete) {
-          const next = getNextPrefecture()
-          if (next) {
-            setInput('')
-            setFeedback('')
-            setIsCorrect(false)
-            setShowAnswer(false)
-          }
+          preserveScrollDuring(() => {
+            const next = getNextPrefecture()
+            if (next) {
+              setInput('')
+              setFeedback('')
+              setIsCorrect(false)
+              setShowAnswer(false)
+            }
+          })
         }
       }, 1500)
     } else {
       setFeedback('❌ 間違いです。もう一度挑戦してください！')
       setInput('')
+      // 入力フィールドにフォーカスを戻す
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
     }
   }
 
@@ -52,6 +72,7 @@ export default function TypingInput() {
     setShowAnswer(true)
     setFeedback(`💡 答え: ${targetPrefecture.name} (${targetPrefecture.kana})`)
     
+    // スクロール位置を保持したまま次の問題へ
     setTimeout(() => {
       if (!gameState.isGameComplete) {
         const next = getNextPrefecture()
@@ -83,7 +104,18 @@ export default function TypingInput() {
             素晴らしい！全ての都道府県を覚えましたね！
           </p>
           <button 
-            onClick={() => isClient && window.location.reload()}
+            onClick={() => {
+              if (isClient) {
+                // スクロール位置を保存
+                const scrollPosition = window.scrollY
+                // 状態をリセット（リロードの代わりに）
+                window.location.reload()
+                // リロード後にスクロール位置を復元
+                setTimeout(() => {
+                  window.scrollTo(0, scrollPosition)
+                }, 100)
+              }
+            }}
             className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
             disabled={!isClient}
           >
@@ -100,13 +132,13 @@ export default function TypingInput() {
       
       <form onSubmit={handleSubmit} className="mb-4">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={handleInputChange}
           placeholder="例: とうきょうと"
           className="typing-input w-full p-4 text-lg border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
           autoComplete="off"
-          autoFocus={isClient}
           disabled={isCorrect || showAnswer || !isClient}
         />
         <button 
@@ -136,7 +168,7 @@ export default function TypingInput() {
         </p>
         <button 
           onClick={handleShowAnswer}
-          className="hint-btn bg-gray-500 hover:gray-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="hint-btn bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
           disabled={isCorrect || showAnswer || !isClient}
         >
           答えを見る
