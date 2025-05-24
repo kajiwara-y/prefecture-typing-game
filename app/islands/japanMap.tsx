@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
-import { Prefecture } from '../data/prefectures'
+import { useGameState } from '../hooks/useGameState'
 
-interface JapanMapProps {
-  targetPrefecture: Prefecture
-}
-
-export default function JapanMap({ targetPrefecture }: JapanMapProps) {
+export default function JapanMap() {
+  const { gameState, isClient } = useGameState()
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const targetPrefecture = gameState.currentPrefecture
+
   useEffect(() => {
+    if (!isClient) return
+
     const loadMap = async () => {
       if (!mapContainerRef.current) return
 
@@ -18,7 +19,6 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
         setIsLoading(true)
         setError(null)
 
-        // SVGファイルを読み込み
         const res = await fetch('./map-full.svg')
         
         if (!res.ok) {
@@ -28,63 +28,49 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
         const svg = await res.text()
         mapContainerRef.current.innerHTML = svg
 
-        // 都道府県要素を取得
         const prefs = mapContainerRef.current.querySelectorAll('.geolonia-svg-map .prefecture')
         
         if (prefs.length === 0) {
           console.warn('都道府県要素が見つかりませんでした')
         }
 
-        // 全ての都道府県を初期状態（グレー）に設定
         prefs.forEach((pref) => {
           const prefElement = pref as HTMLElement
-          prefElement.style.fill = '#e0e0e0'
-          prefElement.style.stroke = '#333'
+          const prefCode = parseInt(prefElement.dataset.code || '0')
+          
+          if (gameState.answeredPrefectures.has(prefCode)) {
+            prefElement.style.fill = '#10b981'
+            prefElement.style.stroke = '#059669'
+          } else if (prefCode === targetPrefecture.id) {
+            prefElement.style.fill = '#ef4444'
+            prefElement.style.stroke = '#dc2626'
+            prefElement.style.animation = 'pulse 2s infinite'
+          } else {
+            prefElement.style.fill = '#e5e7eb'
+            prefElement.style.stroke = '#6b7280'
+          }
+          
           prefElement.style.strokeWidth = '1'
           prefElement.style.cursor = 'pointer'
           prefElement.style.transition = 'fill 0.3s ease'
         })
 
-        // ターゲットの都道府県をハイライト
-        const targetPrefElement = mapContainerRef.current.querySelector(
-          `.prefecture[data-code="${targetPrefecture.id.toString()}"]`
-        ) as HTMLElement
-
-        if (targetPrefElement) {
-          targetPrefElement.style.fill = '#ff6b6b'
-          targetPrefElement.style.stroke = '#fff'
-          targetPrefElement.style.strokeWidth = '2'
-          
-          // アニメーション効果を追加
-          targetPrefElement.style.animation = 'pulse 2s infinite'
-        }
-
-        // イベントリスナーを追加
         prefs.forEach((pref) => {
           const prefElement = pref as HTMLElement
-          const prefCode = prefElement.dataset.code
+          const prefCode = parseInt(prefElement.dataset.code || '0')
           
-          // マウスオーバーイベント（ターゲット以外）
           prefElement.addEventListener('mouseover', (event) => {
             const target = event.currentTarget as HTMLElement
-            if (target.dataset.code !== targetPrefecture.id.toString().padStart(2, '0')) {
-              target.style.fill = '#ccc'
+            if (!gameState.answeredPrefectures.has(prefCode) && prefCode !== targetPrefecture.id) {
+              target.style.fill = '#d1d5db'
             }
           })
 
-          // マウスリーブイベント（ターゲット以外）
           prefElement.addEventListener('mouseleave', (event) => {
             const target = event.currentTarget as HTMLElement
-            if (target.dataset.code !== targetPrefecture.id.toString().padStart(2, '0')) {
-              target.style.fill = '#e0e0e0'
+            if (!gameState.answeredPrefectures.has(prefCode) && prefCode !== targetPrefecture.id) {
+              target.style.fill = '#e5e7eb'
             }
-          })
-
-          // クリックイベント（デバッグ用）
-          prefElement.addEventListener('click', (event) => {
-            const target = event.currentTarget as HTMLElement
-            const prefName = target.getAttribute('title') || target.dataset.name || '不明'
-            console.log(`クリックされた都道府県: ${prefName} (コード: ${prefCode})`)
           })
         })
 
@@ -97,10 +83,11 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
     }
 
     loadMap()
-  }, [targetPrefecture])
+  }, [targetPrefecture, gameState.answeredPrefectures, isClient])
 
-  // CSSアニメーションを動的に追加
   useEffect(() => {
+    if (!isClient) return
+
     const style = document.createElement('style')
     style.textContent = `
       @keyframes pulse {
@@ -112,9 +99,21 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
     document.head.appendChild(style)
 
     return () => {
-      document.head.removeChild(style)
+      if (document.head.contains(style)) {
+        document.head.removeChild(style)
+      }
     }
-  }, [])
+  }, [isClient])
+
+  if (!isClient) {
+    return (
+      <div className="map-container flex-1 text-center">
+        <div className="loading-message flex items-center justify-center h-64">
+          <div className="text-gray-600">地図を準備中...</div>
+        </div>
+      </div>
+    )
+  }
 
   if (error) {
     return (
@@ -123,7 +122,6 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
           <p className="font-bold">エラー</p>
           <p>{error}</p>
         </div>
-        {/* フォールバック用の簡単な地図 */}
         <div className="fallback-map mt-4 p-8 bg-gray-100 rounded-lg">
           <div className="w-32 h-24 bg-red-400 mx-auto rounded flex items-center justify-center text-white font-bold">
             {targetPrefecture.name}
@@ -140,8 +138,7 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           <span className="ml-3 text-gray-600">地図を読み込み中...</span>
         </div>
-      )}
-      
+            )}
       <div 
         ref={mapContainerRef}
         id="map"
@@ -153,13 +150,21 @@ export default function JapanMap({ targetPrefecture }: JapanMapProps) {
       />
       
       {!isLoading && (
-        <div className="map-info mt-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-blue-700 font-semibold">
-            🎯 赤くハイライトされた都道府県名を入力してください
-          </p>
-          <p className="text-sm text-gray-600 mt-1">
-            ヒント: {targetPrefecture.region}地方
-          </p>
+        <div className="map-legend mt-4 p-3 bg-gray-50 rounded-lg">
+          <div className="flex justify-center items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-500 rounded"></div>
+              <span>現在の問題</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-500 rounded"></div>
+              <span>回答済み</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-300 rounded"></div>
+              <span>未回答</span>
+            </div>
+          </div>
         </div>
       )}
     </div>
