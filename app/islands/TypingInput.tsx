@@ -23,6 +23,22 @@ export default function TypingInput() {
     }
   }, [targetPrefecture.id, isClient, isCorrect, showAnswer])
 
+  // ひらがなの省略形を生成する関数
+  const getHiraganaShortForm = (kana: string): string => {
+    if (kana.endsWith('けん')) {
+      return kana.slice(0, -2) // 末尾の「けん」を削除
+    } else if (kana.endsWith('ふ')) {
+      return kana.slice(0, -1) // 末尾の「ふ」を削除
+    } else if (kana.endsWith('と')) {
+      return kana.slice(0, -1) // 末尾の「と」を削除
+    } return kana // 該当しない場合はそのまま
+  }
+
+  // 漢字の省略形を生成する関数
+  const getKanjiShortForm = (name: string): string => {
+    return name.replace(/[県府都]$/, '') // 末尾の都府県文字を削除
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -31,10 +47,17 @@ export default function TypingInput() {
     startGame()
     
     const userInput = input.trim().toLowerCase()
+    
+    // 正解パターンを生成
     const correctAnswers = [
+      // 完全な名前（ひらがな）
       targetPrefecture.kana.toLowerCase(),
+      // 完全な名前（漢字）
       targetPrefecture.name.toLowerCase(),
-      targetPrefecture.name.replace('県', '').replace('府', '').replace('都', '').replace('道', '').toLowerCase()
+      // 省略形（漢字）
+      getKanjiShortForm(targetPrefecture.name).toLowerCase(),
+      // 省略形（ひらがな）
+      getHiraganaShortForm(targetPrefecture.kana).toLowerCase()
     ]
 
     if (correctAnswers.some(answer => userInput === answer)) {
@@ -136,7 +159,7 @@ export default function TypingInput() {
           type="text"
           value={input}
           onChange={handleInputChange}
-          placeholder="例: とうきょうと"
+          placeholder="例: とうきょう / 東京"
           className="typing-input w-full p-4 text-lg border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
           autoComplete="off"
           disabled={isCorrect || showAnswer || !isClient}
