@@ -93,24 +93,31 @@ class GameStateManager {
     }
   }
 
-  answerCorrect(prefectureId: number) {
-    const newAnswered = new Set(this.state.answeredPrefectures)
-    newAnswered.add(prefectureId)
-    
-    const isComplete = newAnswered.size === prefectures.length
-    const endTime = isComplete ? Date.now() : null
-    const totalTime = endTime && this.state.startTime ? endTime - this.state.startTime : 0
+// GameStateManagerクラスに追加
+answerCorrect(prefectureId: number, hintLevel: number = 0) {
+  const newAnswered = new Set(this.state.answeredPrefectures)
+  newAnswered.add(prefectureId)
+  
+  const isComplete = newAnswered.size === prefectures.length
+  const endTime = isComplete ? Date.now() : null
+  const totalTime = endTime && this.state.startTime ? endTime - this.state.startTime : 0
 
-    this.state = {
-      ...this.state,
-      answeredPrefectures: newAnswered,
-      score: this.state.score + 10,
-      isGameComplete: isComplete,
-      endTime,
-      totalTime
-    }
-    this.notifyListeners()
+  // ヒント使用に応じてスコアを調整
+  let scoreIncrement = 10
+  if (hintLevel === 1) scoreIncrement = 8      // 地方ヒント使用
+  else if (hintLevel === 2) scoreIncrement = 6  // 面積ヒント使用
+  else if (hintLevel >= 3) scoreIncrement = 4   // 全ヒント使用
+
+  this.state = {
+    ...this.state,
+    answeredPrefectures: newAnswered,
+    score: this.state.score + scoreIncrement,
+    isGameComplete: isComplete,
+    endTime,
+    totalTime
   }
+  this.notifyListeners()
+}
 
   getNextPrefecture(): Prefecture | null {
     const remaining = prefectures.filter(p => !this.state.answeredPrefectures.has(p.id))

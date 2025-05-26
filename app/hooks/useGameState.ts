@@ -26,7 +26,7 @@ export function useGameState() {
     gameState,
     isClient,
     startGame: () => manager.startGame(),
-    answerCorrect: (id: number) => manager.answerCorrect(id),
+    answerCorrect: (id: number, hintLevel:number) => manager.answerCorrect(id, hintLevel),
     getNextPrefecture: () => manager.getNextPrefecture(),
     resetGame: () => manager.resetGame(),
     getProgress: () => manager.getProgress(),
