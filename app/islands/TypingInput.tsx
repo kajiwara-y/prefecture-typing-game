@@ -9,14 +9,15 @@ export default function TypingInput() {
   const [feedback, setFeedback] = useState('')
   const [isCorrect, setIsCorrect] = useState(false)
   const [showAnswer, setShowAnswer] = useState(false)
+  const [hintLevel, setHintLevel] = useState(0) // 0: なし, 1: 地方, 2: 面積, 3: 文字数
   const inputRef = useRef<HTMLInputElement>(null)
 
   const targetPrefecture = gameState.currentPrefecture
 
-  // 問題が変わったときにフォーカスを戻す
+  // 問題が変わったときに状態をリセット
   useEffect(() => {
+    setHintLevel(0)
     if (isClient && inputRef.current && !isCorrect && !showAnswer) {
-      // 少し遅延させてフォーカス
       setTimeout(() => {
         inputRef.current?.focus()
       }, 100)
@@ -37,6 +38,31 @@ export default function TypingInput() {
   // 漢字の省略形を生成する関数
   const getKanjiShortForm = (name: string): string => {
     return name.replace(/[県府都]$/, '') // 末尾の都府県文字を削除
+  }
+
+  // 面積ランクに基づくヒントメッセージを生成
+  const getAreaHintMessage = (rank: number): string => {
+    if (rank <= 3) {
+      return `日本で最も大きな都道府県の一つです（全国${rank}位）`
+    } else if (rank <= 5) {
+      return `面積が非常に大きい都道府県です（全国${rank}位）`
+    } else if (rank <= 10) {
+      return `面積が大きい都道府県です（全国${rank}位）`
+    } else if (rank <= 20) {
+      return `面積は中程度の都道府県です（全国${rank}位）`
+    } else if (rank <= 35) {
+      return `面積は小さめの都道府県です（全国${rank}位）`
+    } else if (rank >= 45) {
+      return `日本で最も小さな都道府県の一つです（全国${rank}位）`
+    } else {
+      return `面積が小さい都道府県です（全国${rank}位）`
+    }
+  }
+
+  // 文字数ヒントを生成
+  const getCharacterHint = (name: string): string => {
+    const shortForm = getKanjiShortForm(name)
+    return `漢字${shortForm.length}文字の都道府県です`
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -63,7 +89,7 @@ export default function TypingInput() {
     if (correctAnswers.some(answer => userInput === answer)) {
       setFeedback('🎉 正解！')
       setIsCorrect(true)
-      answerCorrect(targetPrefecture.id)
+      answerCorrect(targetPrefecture.id, hintLevel)
       
       // スクロール位置を保持したまま次の問題へ
       setTimeout(() => {
@@ -113,6 +139,12 @@ export default function TypingInput() {
     setInput(e.target.value)
     if (feedback && !isCorrect) {
       setFeedback('')
+    }
+  }
+
+  const getNextHint = () => {
+    if (hintLevel < 3) {
+      setHintLevel(hintLevel + 1)
     }
   }
 
@@ -186,16 +218,81 @@ export default function TypingInput() {
       )}
 
       <div className="hint-section bg-gray-50 p-4 rounded-lg">
-        <p className="text-gray-700 mb-3">
-          <span className="font-semibold">ヒント:</span> {targetPrefecture.region}地方
-        </p>
-        <button 
-          onClick={handleShowAnswer}
-          className="hint-btn bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
-          disabled={isCorrect || showAnswer || !isClient}
-        >
-          答えを見る
-        </button>
+        <div className="mb-3">
+          {/* ヒント段階表示 */}
+          {hintLevel >= 1 && (
+            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-2">
+              <p className="text-yellow-800 text-sm">
+                🗾 <span className="font-semibold">地方ヒント:</span> {targetPrefecture.region}地方
+              </p>
+            </div>
+          )}
+          
+          {hintLevel >= 2 && (
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-2">
+              <p className="text-blue-800 text-sm">
+                📏 <span className="font-semibold">面積ヒント:</span> {getAreaHintMessage(targetPrefecture.areaRank)}
+              </p>
+              <p className="text-blue-600 text-xs mt-1">
+                面積: {targetPrefecture.area.toLocaleString()} km²
+              </p>
+            </div>
+          )}
+          
+          {hintLevel >= 3 && (
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg mb-2">
+              <p className="text-green-800 text-sm">
+                ✏️ <span className="font-semibold">文字数ヒント:</span> {getCharacterHint(targetPrefecture.name)}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {hintLevel < 3 && (
+            <button 
+              onClick={getNextHint}
+              className="hint-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+              disabled={isCorrect || showAnswer || !isClient}
+            >
+              {hintLevel === 0 ? 'ヒントを見る' : 'もっとヒント'}
+            </button>
+          )}
+          
+          <button 
+            onClick={handleShowAnswer}
+            className="hint-btn bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+            disabled={isCorrect || showAnswer || !isClient}
+          >
+            答えを見る
+          </button>
+          
+          {hintLevel > 0 && (
+            <button 
+              onClick={() => setHintLevel(0)}
+              className="hint-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+              disabled={isCorrect || showAnswer || !isClient}
+            >
+              ヒントを隠す
+            </button>
+          )}
+        </div>
+        
+        {/* ヒント進捗表示 */}
+        {hintLevel > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>ヒント進捗</span>
+              <span>{hintLevel}/3</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+              <div 
+                className="bg-yellow-500 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${(hintLevel / 3) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
