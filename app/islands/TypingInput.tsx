@@ -3,7 +3,7 @@ import { useGameState } from '../hooks/useGameState'
 import { useScrollPreservation } from '../hooks/useScrollPreservation'
 
 export default function TypingInput() {
-  const { gameState, startGame, answerCorrect, getNextPrefecture, isClient } = useGameState()
+  const { gameState, startGame, answerCorrect, getNextPrefecture, resetGame, isClient } = useGameState()
   const { preserveScrollDuring } = useScrollPreservation()
   const [input, setInput] = useState('')
   const [feedback, setFeedback] = useState('')
@@ -164,7 +164,7 @@ export default function TypingInput() {
                 // スクロール位置を保存
                 const scrollPosition = window.scrollY
                 // 状態をリセット（リロードの代わりに）
-                window.location.reload()
+                resetGame()
                 // リロード後にスクロール位置を復元
                 setTimeout(() => {
                   window.scrollTo(0, scrollPosition)

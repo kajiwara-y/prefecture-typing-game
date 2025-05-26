@@ -5,8 +5,16 @@ export default function GameControls() {
 
   const handleReset = () => {
     if (isClient && confirm('ゲームをリセットしますか？進捗が失われます。')) {
+      // スクロール位置を保存
+      const scrollPosition = window.scrollY
       resetGame()
-      // window.location.reload() を削除してリロードを避ける
+      // スクロール位置を復元
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+        })
+      })
     }
   }
 
