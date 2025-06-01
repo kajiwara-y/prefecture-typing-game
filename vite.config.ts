@@ -1,4 +1,5 @@
 import build from '@hono/vite-build/cloudflare-workers'
+import nodeBuild from '@hono/vite-build/node' // Node.js用ビルドを追加
 import adapter from '@hono/vite-dev-server/cloudflare'
 import tailwindcss from '@tailwindcss/vite'
 import honox from 'honox/vite'
@@ -20,7 +21,22 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [tailwindcss()]
     }
+  } else if (mode === 'node') {
+    // Node.js用のビルド設定
+    return {
+      ssr: {
+        external: ['react', 'react-dom']
+      },
+      plugins: [
+        honox({
+          client: { input: ['./app/style.css'] }
+        }),
+        tailwindcss(),
+        nodeBuild() // Node.js用ビルドプラグイン
+      ]
+    }
   } else {
+    // 既存のCloudflare Workers用設定はそのまま
     return {
       ssr: {
         external: ['react', 'react-dom']

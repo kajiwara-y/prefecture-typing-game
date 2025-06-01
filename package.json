@@ -4,22 +4,28 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode client && vite build",
+    "build:node": "vite build --mode client && vite build",
+    "start": "tsx server.ts",
     "preview": "wrangler dev",
-    "deploy": "bun run build && wrangler deploy"
+    "deploy": "bun run build && wrangler deploy",
+    "deploy:cloudrun": "pnpm run build:node && gcloud run deploy"
   },
   "private": true,
   "dependencies": {
     "@hono/react-renderer": "^0.3.0",
+    "bun": "^1.2.15",
     "hono": "^4.7.4",
     "honox": "^0.1.38",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tsx": "^4.19.4"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@hono/vite-build": "^1.3.0",
     "@hono/vite-dev-server": "^0.18.2",
     "@tailwindcss/vite": "^4.1.7",
+    "@types/node": "^22.15.29",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "tailwindcss": "^4.1.7",
