@@ -10,19 +10,55 @@ export default function TypingInput() {
   const [isCorrect, setIsCorrect] = useState(false)
   const [showAnswer, setShowAnswer] = useState(false)
   const [hintLevel, setHintLevel] = useState(0) // 0: なし, 1: 地方, 2: 面積, 3: 文字数
+  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true) // 自動進行設定
+  const [correctCount, setCorrectCount] = useState(0) // 連続正解数
   const inputRef = useRef<HTMLInputElement>(null)
 
   const targetPrefecture = gameState.currentPrefecture
 
-  // 問題が変わったときに状態をリセット
+  // キーボードショートカット
   useEffect(() => {
-    setHintLevel(0)
-    if (isClient && inputRef.current && !isCorrect && !showAnswer) {
-      setTimeout(() => {
-        inputRef.current?.focus()
-      }, 100)
+    if (!isClient) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 正解後のEnterで即座に次の問題へ
+      if (e.key === 'Enter' && isCorrect && !gameState.isGameComplete) {
+        e.preventDefault()
+        goToNextQuestion()
+      }
+      // Escapeでヒントリセット
+      if (e.key === 'Escape' && hintLevel > 0) {
+        e.preventDefault()
+        setHintLevel(0)
+      }
+      // Ctrl+Hでヒント表示
+      if (e.ctrlKey && e.key === 'h' && !isCorrect && !showAnswer) {
+        e.preventDefault()
+        getNextHint()
+      }
     }
-  }, [targetPrefecture.id, isClient, isCorrect, showAnswer])
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isCorrect, hintLevel, gameState.isGameComplete, isClient])
+
+  const goToNextQuestion = () => {
+    preserveScrollDuring(() => {
+      const next = getNextPrefecture()
+      if (next) {
+        setInput('')
+        setFeedback('')
+        setIsCorrect(false)
+        setShowAnswer(false)
+        // 即座にフォーカス
+        setTimeout(() => {
+          inputRef.current?.focus()
+        }, 10)
+      }
+    })
+  }
+
+
 
   // ひらがなの省略形を生成する関数
   const getHiraganaShortForm = (kana: string): string => {
@@ -68,50 +104,41 @@ export default function TypingInput() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!isClient) return
+    if (!isClient || isCorrect) return
     
     startGame()
     
     const userInput = input.trim().toLowerCase()
     
-    // 正解パターンを生成
+    // 正解パターンを生成（既存のロジック）
     const correctAnswers = [
-      // 完全な名前（ひらがな）
       targetPrefecture.kana.toLowerCase(),
-      // 完全な名前（漢字）
       targetPrefecture.name.toLowerCase(),
-      // 省略形（漢字）
       getKanjiShortForm(targetPrefecture.name).toLowerCase(),
-      // 省略形（ひらがな）
       getHiraganaShortForm(targetPrefecture.kana).toLowerCase()
     ]
 
     if (correctAnswers.some(answer => userInput === answer)) {
       setFeedback('🎉 正解！')
       setIsCorrect(true)
+      setCorrectCount(prev => prev + 1)
       answerCorrect(targetPrefecture.id, hintLevel)
       
-      // スクロール位置を保持したまま次の問題へ
-      setTimeout(() => {
-        if (!gameState.isGameComplete) {
-          preserveScrollDuring(() => {
-            const next = getNextPrefecture()
-            if (next) {
-              setInput('')
-              setFeedback('')
-              setIsCorrect(false)
-              setShowAnswer(false)
-            }
-          })
-        }
-      }, 1500)
+      // 自動進行が有効な場合のみタイマー設定
+      if (autoAdvanceEnabled) {
+        setTimeout(() => {
+          if (!gameState.isGameComplete) {
+            goToNextQuestion()
+          }
+        }, 800) // 時間を短縮
+      }
     } else {
-      setFeedback('❌ 間違いです。もう一度挑戦してください！')
+      setFeedback('❌ 不正解')
       setInput('')
-      // 入力フィールドにフォーカスを戻す
+      setCorrectCount(0) // 連続正解数リセット
       setTimeout(() => {
         inputRef.current?.focus()
-      }, 100)
+      }, 50)
     }
   }
 
@@ -293,6 +320,15 @@ export default function TypingInput() {
             </div>
           </div>
         )}
+      </div>
+      {/* キーボードショートカット説明 */}
+      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+        <h4 className="text-sm font-semibold text-blue-800 mb-2">⌨️ キーボードショートカット</h4>
+        <div className="text-xs text-blue-700 space-y-1">
+          <div>• <kbd className="bg-white px-1 rounded">Enter</kbd>: 回答 / 正解後に次の問題</div>
+          <div>• <kbd className="bg-white px-1 rounded">Ctrl+H</kbd>: ヒント表示</div>
+          <div>• <kbd className="bg-white px-1 rounded">Esc</kbd>: ヒントを隠す</div>
+        </div>
       </div>
     </div>
   )

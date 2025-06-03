@@ -4,27 +4,53 @@ import { useGameState } from '../hooks/useGameState'
 export default function GameProgress() {
   const { gameState, getProgress, getElapsedTime, isClient } = useGameState()
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [wpm, setWpm] = useState(0) // Words Per Minute
+  const [accuracy, setAccuracy] = useState(100) // 正解率
   const progress = getProgress()
 
   useEffect(() => {
     if (!isClient) return
 
     const interval = setInterval(() => {
-      setElapsedTime(getElapsedTime())
-    }, 1000)
+      const elapsed = getElapsedTime()
+      setElapsedTime(elapsed)
+      
+      // WPM計算（1都道府県 = 1 word として計算）
+      if (elapsed > 0) {
+        const minutes = elapsed / (1000 * 60)
+        const wordsPerMinute = Math.round(progress.answered / minutes)
+        setWpm(isFinite(wordsPerMinute) ? wordsPerMinute : 0)
+      }
+    }, 100) // より頻繁に更新
 
     return () => clearInterval(interval)
-  }, [getElapsedTime, isClient])
+  }, [getElapsedTime, isClient, progress.answered])
 
   const formatTime = (ms: number): string => {
-    const seconds = Math.floor(ms / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    const centiseconds = Math.floor((ms % 1000) / 10)
     
-    if (hours > 0) {
-      return `${hours}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
+    if (minutes > 0) {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`
     }
-    return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`
+    return `${seconds}.${centiseconds.toString().padStart(2, '0')}秒`
+  }
+
+  // ペース計算
+  const calculatePace = (): string => {
+    if (progress.answered === 0 || elapsedTime === 0) return '--'
+    const avgTimePerPrefecture = elapsedTime / progress.answered
+    return formatTime(avgTimePerPrefecture)
+  }
+
+  // 予想完了時間
+  const estimatedFinishTime = (): string => {
+    if (progress.answered === 0 || elapsedTime === 0) return '--'
+    const avgTimePerPrefecture = elapsedTime / progress.answered
+    const remainingTime = (progress.total - progress.answered) * avgTimePerPrefecture
+    return formatTime(elapsedTime + remainingTime)
   }
 
   if (!isClient) {
@@ -32,7 +58,7 @@ export default function GameProgress() {
       <div className="game-progress bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl shadow-lg">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-gray-800">ゲーム進捗</h3>
-          <div className="text-2xl font-mono font-bold text-blue-600">0:00</div>
+          <div className="text-2xl font-mono font-bold text-blue-600">0:00.00</div>
         </div>
         
         <div className="mb-4">
@@ -75,13 +101,13 @@ export default function GameProgress() {
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3">
           <div 
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500 ease-out"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-300 ease-out"
             style={{ width: `${progress.percentage}%` }}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-center">
+      <div className="grid grid-cols-2 gap-4 text-center mb-4">
         <div className="bg-white p-3 rounded-lg">
           <div className="text-2xl font-bold text-green-600">{gameState.score}</div>
           <div className="text-sm text-gray-600">スコア</div>
@@ -92,6 +118,30 @@ export default function GameProgress() {
         </div>
       </div>
 
+      {/* 詳細統計 */}
+      {gameState.startTime && (
+        <div className="grid grid-cols-2 gap-2 text-center mb-4">
+          <div className="bg-white p-2 rounded-lg">
+            <div className="text-lg font-bold text-purple-600">{wpm}</div>
+            <div className="text-xs text-gray-600">問/分</div>
+          </div>
+          <div className="bg-white p-2 rounded-lg">
+            <div className="text-lg font-bold text-indigo-600">{calculatePace()}</div>
+            <div className="text-xs text-gray-600">平均/問</div>
+          </div>
+        </div>
+      )}
+
+      {/* 予想完了時間 */}
+      {gameState.startTime && progress.answered > 0 && !gameState.isGameComplete && (
+        <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
+          <div className="text-center">
+            <div className="text-sm text-yellow-800 font-semibold">予想完了時間</div>
+            <div className="text-lg font-bold text-yellow-700">{estimatedFinishTime()}</div>
+          </div>
+        </div>
+      )}
+
       {gameState.isGameComplete && (
         <div className="mt-4 p-4 bg-green-100 border border-green-400 rounded-lg">
           <div className="text-center">
@@ -101,6 +151,9 @@ export default function GameProgress() {
             </div>
             <div className="text-sm text-green-700 mt-1">
               完了時間: {formatTime(gameState.totalTime)}
+            </div>
+            <div className="text-sm text-green-700">
+              平均: {formatTime(gameState.totalTime / 47)}/問
             </div>
           </div>
         </div>
