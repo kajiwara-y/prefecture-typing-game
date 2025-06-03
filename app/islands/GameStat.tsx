@@ -4,15 +4,18 @@ interface GameRecord {
   date: string
   time: number
   score: number
+  wpm: number // Words Per Minute
+  accuracy: number // 正解率
 }
 
 export default function GameStats() {
   const [records, setRecords] = useState<GameRecord[]>([])
   const [showStats, setShowStats] = useState(false)
+  const [sortBy, setSortBy] = useState<'time' | 'score' | 'wpm'>('time')
 
   useEffect(() => {
     const savedRecords = JSON.parse(localStorage.getItem('gameRecords') || '[]')
-    setRecords(savedRecords)
+    setRecords(savedRecords.sort((a: GameRecord, b: GameRecord) => a.time - b.time))
   }, [])
 
   const formatTime = (ms: number): string => {
@@ -28,6 +31,34 @@ export default function GameStats() {
     }
   }
 
+    const sortedRecords = [...records].sort((a, b) => {
+    switch (sortBy) {
+      case 'time':
+        return a.time - b.time
+      case 'score':
+        return b.score - a.score
+      case 'wpm':
+        return b.wpm - a.wpm
+      default:
+        return a.time - b.time
+    }
+  })
+
+  const getBestRecord = (field: keyof GameRecord) => {
+    if (records.length === 0) return null
+    
+    switch (field) {
+      case 'time':
+        return Math.min(...records.map(r => r.time))
+      case 'score':
+        return Math.max(...records.map(r => r.score))
+      case 'wpm':
+        return Math.max(...records.map(r => r.wpm))
+      default:
+        return null
+    }
+  }
+
   const clearRecords = () => {
     localStorage.removeItem('gameRecords')
     setRecords([])
@@ -38,9 +69,14 @@ export default function GameStats() {
       <div className="mt-6">
         <button
           onClick={() => setShowStats(true)}
-          className="text-blue-500 hover:text-blue-700 underline"
+          className="text-blue-500 hover:text-blue-700 underline flex items-center gap-2"
         >
           📊 過去の記録を見る
+          {records.length > 0 && (
+            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+              {records.length}件
+            </span>
+          )}
         </button>
       </div>
     )
@@ -67,36 +103,156 @@ export default function GameStats() {
           )}
         </div>
       </div>
-      
+
+      {/* ベスト記録サマリー */}
+      {records.length > 0 && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-yellow-100 border border-yellow-300 p-3 rounded-lg text-center">
+            <div className="text-sm text-yellow-800">最速タイム</div>
+            <div className="text-lg font-bold text-yellow-700">
+              {formatTime(getBestRecord('time') || 0)}
+            </div>
+          </div>
+          <div className="bg-green-100 border border-green-300 p-3 rounded-lg text-center">
+            <div className="text-sm text-green-800">最高スコア</div>
+            <div className="text-lg font-bold text-green-700">
+              {getBestRecord('score')}点
+            </div>
+          </div>
+          <div className="bg-purple-100 border border-purple-300 p-3 rounded-lg text-center">
+            <div className="text-sm text-purple-800">最高速度</div>
+            <div className="text-lg font-bold text-purple-700">
+              {getBestRecord('wpm')}問/分
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ソート選択 */}
+      {records.length > 1 && (
+        <div className="mb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSortBy('time')}
+              className={`px-3 py-1 rounded text-sm ${
+                sortBy === 'time' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              タイム順
+            </button>
+            <button
+              onClick={() => setSortBy('score')}
+              className={`px-3 py-1 rounded text-sm ${
+                sortBy === 'score' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              スコア順
+            </button>
+            <button
+              onClick={() => setSortBy('wpm')}
+              className={`px-3 py-1 rounded text-sm ${
+                sortBy === 'wpm' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              速度順
+            </button>
+          </div>
+        </div>
+      )}
+
       {records.length === 0 ? (
         <p className="text-gray-500 text-center py-4">
           まだ記録がありません。ゲームをプレイして記録を作りましょう！
         </p>
       ) : (
-        <div className="space-y-2">
-          {records.map((record, index) => (
-            <div 
-              key={index}
-              className={`flex justify-between items-center p-3 rounded ${
-                index === 0 ? 'bg-yellow-100 border-2 border-yellow-300' : 'bg-white'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <span className={`font-bold ${
-                  index === 0 ? 'text-yellow-600' : 'text-gray-600'
-                }`}>
-                  #{index + 1}
-                </span>
-                {index === 0 && <span className="text-yellow-500">👑</span>}
-                <span className="text-sm text-gray-500">
-                  {new Date(record.date).toLocaleDateString()}
-                </span>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {sortedRecords.map((record, index) => {
+            const isPersonalBest = {
+              time: record.time === getBestRecord('time'),
+              score: record.score === getBestRecord('score'),
+              wpm: record.wpm === getBestRecord('wpm')
+            }
+            
+            return (
+              <div 
+                key={index}
+                className={`flex justify-between items-center p-3 rounded transition-colors ${
+                  index === 0 && sortBy === 'time' 
+                    ? 'bg-yellow-100 border-2 border-yellow-300' 
+                    : 'bg-white hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <span className={`font-bold ${
+                    index === 0 && sortBy === 'time' ? 'text-yellow-600' : 'text-gray-600'
+                  }`}>
+                    #{index + 1}
+                  </span>
+                  {index === 0 && sortBy === 'time' && <span className="text-yellow-500">👑</span>}
+                  <div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(record.date).toLocaleDateString('ja-JP', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="text-center">
+                    <div className={`font-bold ${isPersonalBest.time ? 'text-yellow-600' : 'text-blue-600'}`}>
+                      {formatTime(record.time)}
+                      {isPersonalBest.time && <span className="ml-1">🏆</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">タイム</div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className={`font-bold ${isPersonalBest.score ? 'text-green-600' : 'text-gray-700'}`}>
+                      {record.score}
+                      {isPersonalBest.score && <span className="ml-1">🏆</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">スコア</div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className={`font-bold ${isPersonalBest.wpm ? 'text-purple-600' : 'text-gray-700'}`}>
+                      {record.wpm}
+                      {isPersonalBest.wpm && <span className="ml-1">🏆</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">問/分</div>
+                  </div>
+                </div>
               </div>
-              <div className="font-bold text-blue-600">
-                {formatTime(record.time)}
-              </div>
+            )
+          })}
+        </div>
+      )}
+      
+      {/* 統計情報 */}
+      {records.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">プレイ回数:</span>
+              <span className="font-semibold ml-2">{records.length}回</span>
             </div>
-          ))}
+            <div>
+              <span className="text-gray-600">平均タイム:</span>
+              <span className="font-semibold ml-2">
+                {formatTime(records.reduce((sum, r) => sum + r.time, 0) / records.length)}
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>

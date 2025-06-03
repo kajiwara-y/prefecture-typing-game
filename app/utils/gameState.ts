@@ -102,11 +102,10 @@ answerCorrect(prefectureId: number, hintLevel: number = 0) {
   const endTime = isComplete ? Date.now() : null
   const totalTime = endTime && this.state.startTime ? endTime - this.state.startTime : 0
 
-  // ヒント使用に応じてスコアを調整
   let scoreIncrement = 10
-  if (hintLevel === 1) scoreIncrement = 8      // 地方ヒント使用
-  else if (hintLevel === 2) scoreIncrement = 6  // 面積ヒント使用
-  else if (hintLevel >= 3) scoreIncrement = 4   // 全ヒント使用
+  if (hintLevel === 1) scoreIncrement = 8
+  else if (hintLevel === 2) scoreIncrement = 6
+  else if (hintLevel >= 3) scoreIncrement = 4
 
   this.state = {
     ...this.state,
@@ -116,6 +115,12 @@ answerCorrect(prefectureId: number, hintLevel: number = 0) {
     endTime,
     totalTime
   }
+
+  // ゲーム完了時に記録を保存
+  if (isComplete) {
+    saveGameRecord(this.state)
+  }
+
   this.notifyListeners()
 }
 
@@ -151,6 +156,8 @@ answerCorrect(prefectureId: number, hintLevel: number = 0) {
   }
 }
 
+
+
 // シングルトンインスタンス
 let gameStateManager: GameStateManager | null = null
 
@@ -159,4 +166,30 @@ export function getGameStateManager(): GameStateManager {
     gameStateManager = new GameStateManager()
   }
   return gameStateManager
+}
+
+export function saveGameRecord(gameState: GameState) {
+  if (typeof window === 'undefined' || !gameState.isGameComplete) return
+
+  const totalMinutes = gameState.totalTime / (1000 * 60)
+  const wpm = Math.round(47 / totalMinutes)
+  
+  const newRecord = {
+    date: new Date().toISOString(),
+    time: gameState.totalTime,
+    score: gameState.score,
+    wpm: isFinite(wpm) ? wpm : 0,
+    accuracy: 100 // 現在は全問正解前提、将来的に不正解数も追跡可能
+  }
+
+  try {
+    const existingRecords = JSON.parse(localStorage.getItem('gameRecords') || '[]')
+    const updatedRecords = [...existingRecords, newRecord]
+      .sort((a, b) => a.time - b.time) // タイム順でソート
+      .slice(0, 50) // 最大50件まで保存
+    
+    localStorage.setItem('gameRecords', JSON.stringify(updatedRecords))
+  } catch (error) {
+    console.error('記録の保存に失敗:', error)
+  }
 }
