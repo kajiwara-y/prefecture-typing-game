@@ -1,5 +1,5 @@
 import build from '@hono/vite-build/cloudflare-workers'
-import nodeBuild from '@hono/vite-build/node' // Node.js用ビルドを追加
+import bunBuild from '@hono/vite-build/bun'
 import adapter from '@hono/vite-dev-server/cloudflare'
 import tailwindcss from '@tailwindcss/vite'
 import honox from 'honox/vite'
@@ -10,33 +10,37 @@ export default defineConfig(({ mode }) => {
     return {
       build: {
         rollupOptions: {
-          input: ['./app/client.ts', './app/style.css'],
+          input: {
+            client: "./app/client.ts",
+            style: "./app/style.css",
+          },
           output: {
-            entryFileNames: 'static/client.js',
-            chunkFileNames: 'static/assets/[name]-[hash].js',
-            assetFileNames: 'static/assets/[name].[ext]'
-          }
+            dir: "./dist",
+            // assetsパスに統一
+            entryFileNames: "assets/[name].js",
+            assetFileNames: "assets/[name].[ext]",
+          },
         },
-        emptyOutDir: false
+        copyPublicDir: false,
+        minify: true,
       },
       plugins: [tailwindcss()]
     }
-  } else if (mode === 'node') {
-    // Node.js用のビルド設定
+  } else if (mode === 'bun') {
     return {
       ssr: {
         external: ['react', 'react-dom']
       },
       plugins: [
-        honox({
-          client: { input: ['./app/style.css'] }
-        }),
+        honox(),
         tailwindcss(),
-        nodeBuild() // Node.js用ビルドプラグイン
+        bunBuild({
+          minify: false
+        })
       ]
     }
   } else {
-    // 既存のCloudflare Workers用設定はそのまま
+    // Cloudflare Workers用設定
     return {
       ssr: {
         external: ['react', 'react-dom']

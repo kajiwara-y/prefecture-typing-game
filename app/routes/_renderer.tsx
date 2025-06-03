@@ -9,8 +9,9 @@ export default reactRenderer(({ children }) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         {import.meta.env.PROD ? (
           <>
-            <script type="module" src="/static/client.js"></script>
-            <link href="/static/assets/style.css" rel="stylesheet" />
+            {/* /assets/パスに統一 */}
+            <script type="module" src="/assets/client.js"></script>
+            <link href="/assets/style.css" rel="stylesheet" />
           </>
         ) : (
           <>
