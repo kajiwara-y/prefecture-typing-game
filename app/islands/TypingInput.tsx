@@ -20,14 +20,18 @@ export default function TypingInput() {
   // 問題が変わったときに状態をリセット
   useEffect(() => {
     setHintLevel(0)
-    setIsTypingPractice(false)
-    setShowAnswer(false)
+    // showAnswer が true の場合はリセットしない
+    if (!showAnswer) {
+      setIsTypingPractice(false)
+      setShowAnswer(false)
+    }
+  
     if (isClient && inputRef.current && !isCorrect && !showAnswer) {
       setTimeout(() => {
         inputRef.current?.focus()
       }, 50)
     }
-  }, [targetPrefecture.id, isClient, isCorrect, showAnswer])
+  }, [targetPrefecture.id, isClient, isCorrect]) // showAnswer を依存配列から除外
 
   // キーボードショートカット
   useEffect(() => {
@@ -190,7 +194,8 @@ export default function TypingInput() {
   // プレースホルダーテキストを動的に生成
   const getPlaceholder = (): string => {
     if (isTypingPractice) {
-      return `${targetPrefecture.name} と入力してください`
+      const result = `${targetPrefecture.kana} / (${targetPrefecture.name} と入力してください`
+      return result
     }
     return "例: とうきょう / 東京"
   }
