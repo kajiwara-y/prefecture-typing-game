@@ -14,6 +14,7 @@ export default function TypingInput() {
   const [correctCount, setCorrectCount] = useState(0) // 連続正解数
   const [isTypingPractice, setIsTypingPractice] = useState(false) // 新しい状態
   const inputRef = useRef<HTMLInputElement>(null)
+  const autoMoveCountMsec = 650
 
   const targetPrefecture = gameState.currentPrefecture
 
@@ -34,30 +35,29 @@ export default function TypingInput() {
   }, [targetPrefecture.id, isClient, isCorrect]) // showAnswer を依存配列から除外
 
   // キーボードショートカット
-  useEffect(() => {
-    if (!isClient) return
+useEffect(() => {
+  if (!isClient) return
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 正解後またはタイピング練習完了後のEnterで次の問題へ
-      if (e.key === 'Enter' && (isCorrect || isTypingPractice) && !gameState.isGameComplete) {
-        e.preventDefault()
-        goToNextQuestion()
-      }
-      // Escapeでヒントリセット
-      if (e.key === 'Escape' && hintLevel > 0) {
-        e.preventDefault()
-        setHintLevel(0)
-      }
-      // Ctrl+Hでヒント表示
-      if (e.ctrlKey && e.key === 'h' && !isCorrect && !showAnswer && !isTypingPractice) {
-        e.preventDefault()
-        getNextHint()
-      }
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // 正解後またはタイピング練習完了後のEnterで次の問題へ
+    if (e.key === 'Enter' && (isCorrect || (isTypingPractice === false && feedback.includes('完了'))) && !gameState.isGameComplete) {
+      e.preventDefault()
+      goToNextQuestion()
     }
+    // 他のショートカットは変更なし
+    if (e.key === 'Escape' && hintLevel > 0) {
+      e.preventDefault()
+      setHintLevel(0)
+    }
+    if (e.ctrlKey && e.key === 'h' && !isCorrect && !showAnswer && !isTypingPractice) {
+      e.preventDefault()
+      getNextHint()
+    }
+  }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isCorrect, isTypingPractice, hintLevel, gameState.isGameComplete, isClient])
+  document.addEventListener('keydown', handleKeyDown)
+  return () => document.removeEventListener('keydown', handleKeyDown)
+}, [isCorrect, isTypingPractice, feedback, hintLevel, gameState.isGameComplete, isClient])
 
   const goToNextQuestion = () => {
     preserveScrollDuring(() => {
@@ -70,6 +70,9 @@ export default function TypingInput() {
         setIsTypingPractice(false)
         setTimeout(() => {
           inputRef.current?.focus()
+          if (inputRef.current) {
+            inputRef.current.value = ''
+          }
         }, 10)
       }
     })
@@ -96,6 +99,7 @@ export default function TypingInput() {
       if (isTypingPractice) {
         // タイピング練習モードの場合
         setFeedback('✅ タイピング練習完了！')
+        setIsCorrect(false) //（スコアに加算しない）
         setIsTypingPractice(false)
         setCorrectCount(prev => prev + 1)
         
@@ -105,7 +109,7 @@ export default function TypingInput() {
             if (!gameState.isGameComplete) {
               goToNextQuestion()
             }
-          }, 800)
+          }, autoMoveCountMsec)
         }
       } else {
         // 通常の回答モードの場合
@@ -119,7 +123,7 @@ export default function TypingInput() {
             if (!gameState.isGameComplete) {
               goToNextQuestion()
             }
-          }, 800)
+          }, autoMoveCountMsec)
         }
       }
     } else {
@@ -287,7 +291,7 @@ export default function TypingInput() {
             {isTypingPractice ? 'タイピング確認' : '回答する'}
           </button>
           
-          {(isCorrect || isTypingPractice) && !gameState.isGameComplete && (
+          {((isCorrect || (isTypingPractice === false && feedback.includes('完了'))) && !gameState.isGameComplete) && (
             <button 
               type="button"
               onClick={goToNextQuestion}
@@ -327,7 +331,7 @@ export default function TypingInput() {
             onChange={(e) => setAutoAdvanceEnabled(e.target.checked)}
             className="mr-2"
           />
-          自動で次の問題に進む（0.8秒後）
+          自動で次の問題に進む（{autoMoveCountMsec}ミリ秒後）
         </label>
       </div>
 
