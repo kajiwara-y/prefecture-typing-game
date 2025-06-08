@@ -3,7 +3,7 @@ import { GameProvider, useGameState } from '../contexts/GameContext'
 import { getGameStateManager} from '../utils/gameState'
 
 function GameProgressInner() {
-  const { gameState, getProgress, getElapsedTime, isClient } = useGameState()
+  const { gameState, getProgress, getElapsedTime, isClient, isExpertMode } = useGameState()
   const [elapsedTime, setElapsedTime] = useState(0)
   const [wpm, setWpm] = useState(0) // Words Per Minute
   const progress = getProgress()
@@ -93,16 +93,24 @@ function GameProgressInner() {
   }
 
   return (
-    <div className="game-progress bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl shadow-lg">
+    <div className={`game-progress p-6 rounded-xl shadow-lg ${
+      isExpertMode 
+        ? 'bg-gradient-to-r from-purple-50 to-indigo-50' 
+        : 'bg-gradient-to-r from-blue-50 to-indigo-50'
+    }`}>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-gray-800">ゲーム進捗</h3>
-        <div className="text-2xl font-mono font-bold text-blue-600">
+        <h3 className="text-lg font-bold text-gray-800">
+          {isExpertMode ? 'エキスパート進捗' : 'ゲーム進捗'}
+        </h3>
+        <div className={`text-2xl font-mono font-bold ${
+          isExpertMode ? 'text-purple-600' : 'text-blue-600'
+        }`}>
           {formatTime(elapsedTime)}
         </div>
       </div>
  
-      {/* 対象地方の表示（47都道府県でない場合のみ） */}
-      {targetInfo.totalCount < 47 && (
+      {/* エキスパートモードでは地方表示をスキップ */}
+      {!isExpertMode && targetInfo.totalCount < 47 && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <h4 className="text-sm font-semibold text-yellow-800 mb-2">
             📍 今回の対象地方 ({targetInfo.regions.length}地方)
@@ -122,6 +130,18 @@ function GameProgressInner() {
           </div>
         </div>
       )}
+
+      {/* エキスパートモード用の説明 */}
+      {isExpertMode && (
+        <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <h4 className="text-sm font-semibold text-purple-800 mb-2">
+            🎓 エキスパートモード
+          </h4>
+          <div className="text-xs text-purple-700">
+            形状認識による都道府県判定チャレンジ
+          </div>
+        </div>
+      )}
       
       <div className="mb-4">
         <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -130,12 +150,17 @@ function GameProgressInner() {
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3">
           <div 
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-300 ease-out"
+            className={`h-3 rounded-full transition-all duration-300 ease-out ${
+              isExpertMode 
+                ? 'bg-gradient-to-r from-purple-500 to-indigo-600'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+            }`}
             style={{ width: `${progress.percentage}%` }}
           />
         </div>
       </div>
 
+      {/* 既存のスコア表示部分はそのまま */}
       <div className="grid grid-cols-2 gap-4 text-center mb-4">
         <div className="bg-white p-3 rounded-lg">
           <div className="text-2xl font-bold text-green-600">{gameState.score}</div>
@@ -147,11 +172,13 @@ function GameProgressInner() {
         </div>
       </div>
 
-      {/* 詳細統計 */}
+      {/* 既存の詳細統計部分はそのまま */}
       {gameState.startTime && (
         <div className="grid grid-cols-2 gap-2 text-center mb-4">
           <div className="bg-white p-2 rounded-lg">
-            <div className="text-lg font-bold text-purple-600">{wpm}</div>
+            <div className={`text-lg font-bold ${
+              isExpertMode ? 'text-purple-600' : 'text-purple-600'
+            }`}>{wpm}</div>
             <div className="text-xs text-gray-600">問/分</div>
           </div>
           <div className="bg-white p-2 rounded-lg">
@@ -161,7 +188,7 @@ function GameProgressInner() {
         </div>
       )}
 
-      {/* 予想完了時間 */}
+      {/* 既存の予想完了時間部分はそのまま */}
       {gameState.startTime && progress.answered > 0 && !gameState.isGameComplete && (
         <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
           <div className="text-center">
@@ -176,7 +203,10 @@ function GameProgressInner() {
           <div className="text-center">
             <div className="text-2xl mb-2">🎉 おめでとうございます！</div>
             <div className="text-lg font-bold text-green-800">
-               {targetInfo.totalCount < 47 ? "地方制覇！" : "全都道府県制覇！"} 
+                          {isExpertMode 
+                ? "エキスパートモード制覇！" 
+                : targetInfo.totalCount < 47 ? "地方制覇！" : "全都道府県制覇！"
+              } 
             </div>
             <div className="text-sm text-green-700 mt-1">
               完了時間: {formatTime(gameState.totalTime)}

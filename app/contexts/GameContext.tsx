@@ -5,6 +5,7 @@ interface GameContextType {
   gameState: GameState
   isClient: boolean
   resetTrigger: number
+  isExpertMode: boolean
   startGame: () => void
   answerCorrect: (id: number, hintLevel: number) => void
   getNextPrefecture: () => any
@@ -16,7 +17,7 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | null>(null)
 
-export function GameProvider({ children }: { children: ReactNode }) {
+export function GameProvider({ children, expertMode = false }: { children: ReactNode, expertMode?: boolean }) {
   const [isClient, setIsClient] = useState(false)
   const [gameState, setGameState] = useState<GameState>(() => getGameStateManager().getState())
   const [resetTrigger, setResetTrigger] = useState(0)
@@ -25,8 +26,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsClient(true)
     const manager = getGameStateManager()
     
-    // パスベースでのモード初期化
-    manager.initializeFromPath()
+    // エキスパートモードでない場合のみパスベースでの初期化
+    if (!expertMode) {
+      manager.initializeFromPath()
+    }
     setGameState(manager.getState())
     
     const unsubscribe = manager.subscribe((newState) => {
@@ -34,7 +37,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     })
 
     return unsubscribe
-  }, [])
+  }, [expertMode])
 
   const manager = getGameStateManager()
 
@@ -52,6 +55,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     gameState,
     isClient,
     resetTrigger,
+    isExpertMode: expertMode,
     startGame: () => manager.startGame(),
     answerCorrect: (id: number, hintLevel: number) => manager.answerCorrect(id, hintLevel),
     getNextPrefecture: () => manager.getNextPrefecture(),

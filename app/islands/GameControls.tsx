@@ -2,7 +2,33 @@ import { GameProvider, useGameState } from '../contexts/GameContext'
 import { getGameStateManager } from '../utils/gameState'
 
 function GameControlsInner() {
-  const { resetGame, gameState, isClient } = useGameState()
+  const { resetGame, gameState, isClient, isExpertMode } = useGameState()
+
+  // エキスパートモードの場合は簡単なリセットのみ
+  if (isExpertMode) {
+    return (
+      <div className="game-controls flex justify-center items-center gap-3">
+        <button
+          onClick={() => {
+            if (isClient && confirm('エキスパートモードをリセットしますか？進捗が失われます。')) {
+              localStorage.removeItem('gameState')
+              resetGame()
+            }
+          }}
+          className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold text-sm"
+          disabled={!isClient}
+        >
+          🎓 エキスパートリセット
+        </button>
+        
+        {isClient && gameState.startTime && (
+          <div className="flex items-center text-xs text-gray-600 bg-purple-100 px-3 py-1 rounded-lg">
+            <span>🎓 エキスパートモード実行中</span>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // 地方ランダムモードかどうかを判定
   const isRegionMode = gameState.targetPrefectures.length < 47
