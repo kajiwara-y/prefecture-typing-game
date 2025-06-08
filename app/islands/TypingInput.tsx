@@ -14,6 +14,7 @@ function TypingInputInner() {
     getNextPrefecture,
     resetGame,
     isClient,
+    isExpertMode // 追加
   } = useGameState();
   const { preserveScrollDuring } = useScrollPreservation();
   const [input, setInput] = useState("");
@@ -310,10 +311,12 @@ function TypingInputInner() {
       <div className="typing-container">
         <div className="text-center p-8">
           <h2 className="text-3xl font-bold text-green-600 mb-4">
-            🎊 {isRegionMode ? "地方制覇！" : "全都道府県制覇！"} 🎊
+            🎊 {isExpertMode ? "エキスパートモード制覇！" : isRegionMode ? "地方制覇！" : "全都道府県制覇！"} 🎊
           </h2>
           <p className="text-lg text-gray-700 mb-2">
-            {isRegionMode
+            {isExpertMode
+              ? "素晴らしい！全ての都道府県の形を覚えましたね！"
+              : isRegionMode
               ? `素晴らしい！${gameState.targetPrefectures.length}都道府県を覚えましたね！`
               : "素晴らしい！全ての都道府県を覚えましたね！"}
           </p>
@@ -321,36 +324,53 @@ function TypingInputInner() {
             最終スコア: {gameState.score}点
           </p>
 
-          {/* 地方ランダムモードの場合は2つのボタン */}
-          {isRegionMode ? (
+          {/* エキスパートモードの場合はシンプルなリスタートボタンのみ */}
+          {isExpertMode ? (
             <div className="space-y-3">
               <button
-                onClick={() => handleRestart(true)} // 地方ランダムモード継続
-                className="block w-full bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                onClick={() => handleRestart(false)}
+                className="block w-full bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
                 disabled={!isClient}
               >
-                🎲 別の地方でもう一度挑戦
-              </button>
-              <button
-                onClick={() => handleRestart(false)} // 全県モードに切り替え
-                className="block w-full bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
-                disabled={!isClient}
-              >
-                🗾 全47都道府県に挑戦
+                🎓 もう一度挑戦する
               </button>
               <div className="text-xs text-gray-500 mt-2">
-                現在: {getTargetInfo().regions.join("・")}地方モード
+                エキスパートモード: 形状認識チャレンジ
               </div>
             </div>
           ) : (
-            /* 全県モードの場合は1つのボタン */
-            <button
-              onClick={() => handleRestart(false)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
-              disabled={!isClient}
-            >
-              もう一度挑戦する
-            </button>
+            /* 通常モードの既存ボタン */
+            <>
+              {isRegionMode ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => handleRestart(true)}
+                    className="block w-full bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                    disabled={!isClient}
+                  >
+                    🎲 別の地方でもう一度挑戦
+                  </button>
+                  <button
+                    onClick={() => handleRestart(false)}
+                    className="block w-full bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                    disabled={!isClient}
+                  >
+                    🗾 全47都道府県に挑戦
+                  </button>
+                  <div className="text-xs text-gray-500 mt-2">
+                    現在: {getTargetInfo().regions.join("・")}地方モード
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleRestart(false)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                  disabled={!isClient}
+                >
+                  もう一度挑戦する
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -361,7 +381,10 @@ function TypingInputInner() {
     <div className="typing-container">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">
-          {isTypingPractice ? "タイピング練習" : "都道府県名を入力してください"}
+          {isExpertMode 
+            ? (isTypingPractice ? "タイピング練習" : "都道府県名を入力してください")
+            : (isTypingPractice ? "タイピング練習" : "都道府県名を入力してください")
+          }
         </h2>
         {correctCount > 0 && (
           <div className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full">
@@ -370,7 +393,16 @@ function TypingInputInner() {
         )}
       </div>
 
-      {/* タイピング練習モードの説明 */}
+      {/* エキスパートモード用の説明を追加 */}
+      {isExpertMode && !isTypingPractice && (
+        <div className="mb-4 p-3 bg-purple-100 border border-purple-300 rounded-lg">
+          <p className="text-purple-800 text-sm">
+            🎓 <strong>エキスパートモード:</strong> 都道府県の形だけを見て判断してください
+          </p>
+        </div>
+      )}
+
+      {/* 既存のタイピング練習モードの説明はそのまま */}
       {isTypingPractice && (
         <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg">
           <p className="text-blue-800 text-sm">
@@ -454,8 +486,14 @@ function TypingInputInner() {
         <div className="hint-section bg-gray-50 p-4 rounded-lg">
           <div className="mb-3">
             {hintLevel >= 1 && (
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-2">
-                <p className="text-yellow-800 text-sm">
+              <div className={`border p-3 rounded-lg mb-2 ${
+                isExpertMode 
+                  ? 'bg-purple-50 border-purple-200' 
+                  : 'bg-yellow-50 border-yellow-200'
+              }`}>
+                <p className={`text-sm ${
+                  isExpertMode ? 'text-purple-800' : 'text-yellow-800'
+                }`}>
                   🗾 <span className="font-semibold">地方ヒント:</span>{" "}
                   {targetPrefecture.region}地方
                 </p>
@@ -463,20 +501,34 @@ function TypingInputInner() {
             )}
 
             {hintLevel >= 2 && (
-              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-2">
-                <p className="text-blue-800 text-sm">
+              <div className={`border p-3 rounded-lg mb-2 ${
+                isExpertMode 
+                  ? 'bg-purple-50 border-purple-200' 
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <p className={`text-sm ${
+                  isExpertMode ? 'text-purple-800' : 'text-blue-800'
+                }`}>
                   📏 <span className="font-semibold">面積ヒント:</span>{" "}
                   {getAreaHintMessage(targetPrefecture.areaRank)}
                 </p>
-                <p className="text-blue-600 text-xs mt-1">
+                <p className={`text-xs mt-1 ${
+                  isExpertMode ? 'text-purple-600' : 'text-blue-600'
+                }`}>
                   面積: {targetPrefecture.area.toLocaleString()} km²
                 </p>
               </div>
             )}
 
             {hintLevel >= 3 && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-lg mb-2">
-                <p className="text-green-800 text-sm">
+              <div className={`border p-3 rounded-lg mb-2 ${
+                isExpertMode 
+                  ? 'bg-purple-50 border-purple-200' 
+                  : 'bg-green-50 border-green-200'
+              }`}>
+                <p className={`text-sm ${
+                  isExpertMode ? 'text-purple-800' : 'text-green-800'
+                }`}>
                   ✏️ <span className="font-semibold">文字数ヒント:</span>{" "}
                   {getCharacterHint(targetPrefecture.name)}
                 </p>
@@ -488,7 +540,11 @@ function TypingInputInner() {
             {hintLevel < 3 && (
               <button
                 onClick={getNextHint}
-                className="hint-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed text-sm transition-colors"
+                className={`hint-btn text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed text-sm transition-colors ${
+                  isExpertMode 
+                    ? 'bg-purple-500 hover:bg-purple-600' 
+                    : 'bg-yellow-500 hover:bg-yellow-600'
+                }`}
                 disabled={isCorrect || showAnswer || !isClient}
                 title="Ctrl+H"
               >
@@ -524,7 +580,9 @@ function TypingInputInner() {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
                 <div
-                  className="bg-yellow-500 h-1 rounded-full transition-all duration-300"
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    isExpertMode ? 'bg-purple-500' : 'bg-yellow-500'
+                  }`}
                   style={{ width: `${(hintLevel / 3) * 100}%` }}
                 />
               </div>
@@ -534,11 +592,17 @@ function TypingInputInner() {
       )}
 
       {/* キーボードショートカット説明 - タイピング練習中は簡略化 */}
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <h4 className="text-sm font-semibold text-blue-800 mb-2">
+      <div className={`mt-4 p-3 rounded-lg ${
+        isExpertMode ? 'bg-purple-50' : 'bg-blue-50'
+      }`}>
+        <h4 className={`text-sm font-semibold mb-2 ${
+          isExpertMode ? 'text-purple-800' : 'text-blue-800'
+        }`}>
           ⌨️ キーボードショートカット
         </h4>
-        <div className="text-xs text-blue-700 space-y-1">
+        <div className={`text-xs space-y-1 ${
+          isExpertMode ? 'text-purple-700' : 'text-blue-700'
+        }`}>
           <div>
             • <kbd className="bg-white px-1 rounded">Enter</kbd>:{" "}
             {isTypingPractice ? "タイピング確認" : "回答"} / 次の問題
