@@ -1,4 +1,3 @@
-// app/routes/expert.tsx の修正
 import { createRoute } from 'honox/factory'
 import ExpertMap from '../islands/ExpertMap'
 import TypingInput from '../islands/TypingInput'
@@ -10,21 +9,6 @@ export default createRoute((c) => {
   return c.render(
     <div className="game-container max-w-7xl mx-auto bg-white rounded-2xl p-8 shadow-xl">
       <GameHeader />
-      
-      {/* エキスパートモード表示 */}
-      <div className="mb-6 text-center">
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
-          <div className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
-            🎓 エキスパートモード（形状認識）
-          </div>
-          <a
-            href="/"
-            className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold hover:bg-green-200 transition-colors"
-          >
-            🗾 通常モードに戻る
-          </a>
-        </div>
-      </div>
       
       {/* PC・タブレット用レイアウト (1024px以上) */}
       <div className="hidden lg:block">

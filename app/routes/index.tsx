@@ -4,27 +4,11 @@ import TypingInput from '../islands/TypingInput'
 import GameHeader from '../islands/GameHeader'      
 import GameProgress from '../islands/GameProgress'
 import GameControls from '../islands/GameControls'
-import RegionSelector from '../islands/RegionSelector'
 
 export default createRoute((c) => {
   return c.render(
     <div className="game-container max-w-7xl mx-auto bg-white rounded-2xl p-8 shadow-xl">
       <GameHeader />
-      
-      {/* 全県モード表示 */}
-      <div className="mb-6 text-center">
-        <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-          🗾 全47都道府県モード
-        </div>
-          <RegionSelector />
-          {/* エキスパートモードへのリンクを追加 */}
-          <a
-            href="/expert"
-            className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold hover:bg-purple-200 transition-colors"
-          >
-            🎓 エキスパートモード
-          </a>
-      </div>
       
       {/* PC・タブレット用レイアウト (1024px以上) */}
       <div className="hidden lg:block">

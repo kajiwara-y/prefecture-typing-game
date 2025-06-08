@@ -4,7 +4,6 @@ import TypingInput from '../../islands/TypingInput'
 import GameHeader from '../../islands/GameHeader'      
 import GameProgress from '../../islands/GameProgress'
 import GameControls from '../../islands/GameControls'
-import RegionSelector from '../../islands/RegionSelector'
 
 export default createRoute((c) => {
   const numberParam = c.req.param('number')
@@ -18,21 +17,6 @@ export default createRoute((c) => {
   return c.render(
     <div className="game-container max-w-7xl mx-auto bg-white rounded-2xl p-8 shadow-xl">
       <GameHeader />
-      
-      {/* 地方モード表示 */}
-      <div className="mb-6 text-center">
-        <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-          🎯 {number}地方ランダムモード
-        </div>
-        <RegionSelector />
-        {/* エキスパートモードへのリンクを追加 */}
-        <a
-          href="/expert"
-          className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold hover:bg-purple-200 transition-colors"
-        >
-          🎓 エキスパートモード
-        </a>
-      </div>
       
       {/* PC・タブレット用レイアウト (1024px以上) */}
       <div className="hidden lg:block">
