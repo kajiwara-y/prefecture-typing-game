@@ -44,23 +44,9 @@ class GameStateManager {
   }
 
   private getInitialState(): GameState {
-    // サーバーサイドでは window が存在しないため、クライアントサイドでのみ実行
-    let targetPrefectures: number[]
+    // サーバーサイドでは全都道府県を対象とする
+    const targetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
 
-    if (typeof window !== 'undefined') {
-      // クライアントサイドの場合のみURLパラメーターを取得
-      const urlParams = new URLSearchParams(window.location.search)
-      const regionCount = parseInt(urlParams.get('regions') || '0')
-
-      targetPrefectures = regionCount > 0
-        ? getRandomRegions(regionCount)
-        : Array.from({ length: 47 }, (_, i) => i + 1)
-    } else {
-      // サーバーサイドでは全都道府県を対象とする
-      targetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
-    }
-
-    const availablePrefectures = prefectures.filter(p => targetPrefectures.includes(p.id))
     return {
       startTime: null,
       endTime: null,
@@ -101,6 +87,25 @@ class GameStateManager {
       const saved = localStorage.getItem('gameState')
       if (saved) {
         const parsed = JSON.parse(saved)
+        
+        // URLパラメーターと保存された状態の整合性をチェック
+        const urlParams = new URLSearchParams(window.location.search)
+        const regionCount = parseInt(urlParams.get('regions') || '0')
+        
+        let expectedTargetPrefectures: number[]
+        if (regionCount > 0) {
+          // URLパラメーターがある場合は、保存された状態を使わずに新しく生成
+          expectedTargetPrefectures = getRandomRegions(regionCount)
+        } else {
+          expectedTargetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
+        }
+        
+        // URLパラメーターがある場合は保存された状態を無視
+        if (regionCount > 0) {
+          console.log('loadFromStorage - ignoring saved state due to URL params')
+          return
+        }
+        
         this.state = {
           ...parsed,
           answeredPrefectures: new Set(parsed.answeredPrefectures),
@@ -209,7 +214,38 @@ class GameStateManager {
 
   resetGame() {
     console.log('GameStateManager.resetGame called')
-    this.state = this.getInitialState()
+    
+    // URLパラメーターを確認して新しい対象都道府県を設定
+    let targetPrefectures: number[]
+    
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const regionCount = parseInt(urlParams.get('regions') || '0')
+      
+      if (regionCount > 0) {
+        targetPrefectures = getRandomRegions(regionCount)
+      } else {
+        targetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
+      }
+    } else {
+      targetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
+    }
+
+    // 対象都道府県から最初の問題を選択
+    const availablePrefectures = prefectures.filter(p => targetPrefectures.includes(p.id))
+    const firstPrefecture = availablePrefectures[Math.floor(Math.random() * availablePrefectures.length)]
+
+    this.state = {
+      startTime: null,
+      endTime: null,
+      answeredPrefectures: new Set<number>(),
+      currentPrefecture: firstPrefecture,
+      totalTime: 0,
+      isGameComplete: false,
+      score: 0,
+      targetPrefectures
+    }
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('gameState')
     }

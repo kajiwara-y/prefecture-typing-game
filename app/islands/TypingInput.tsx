@@ -291,7 +291,10 @@ function TypingInputInner() {
             onClick={() => {
               if (isClient) {
                 const scrollPosition = window.scrollY;
-                resetGame();
+                // localStorage をクリアしてからリセット
+                localStorage.removeItem("gameState");
+
+                resetGame(); 
                 setCorrectCount(0);
                 setTimeout(() => {
                   window.scrollTo(0, scrollPosition);
