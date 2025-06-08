@@ -9,6 +9,9 @@ export function useGameState() {
     setIsClient(true)
     const manager = getGameStateManager()
     
+    // クライアントサイドでURLパラメーターを適用
+    manager.initializeFromURL()
+    
     // 初期状態を設定
     setGameState(manager.getState())
     
@@ -26,10 +29,11 @@ export function useGameState() {
     gameState,
     isClient,
     startGame: () => manager.startGame(),
-    answerCorrect: (id: number, hintLevel:number) => manager.answerCorrect(id, hintLevel),
+    answerCorrect: (id: number, hintLevel: number) => manager.answerCorrect(id, hintLevel),
     getNextPrefecture: () => manager.getNextPrefecture(),
     resetGame: () => manager.resetGame(),
     getProgress: () => manager.getProgress(),
-    getElapsedTime: () => manager.getElapsedTime()
+    getElapsedTime: () => manager.getElapsedTime(),
+    getTargetInfo: () => manager.getTargetInfo()
   }
 }

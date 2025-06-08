@@ -61,3 +61,31 @@ export const prefectures: Prefecture[] = [
 export const getRandomPrefecture = (): Prefecture => {
   return prefectures[Math.floor(Math.random() * prefectures.length)]
 }
+
+export const regions = [
+  { name: '北海道', prefectures: [1] },
+  { name: '東北', prefectures: [2, 3, 4, 5, 6, 7] },
+  { name: '関東', prefectures: [8, 9, 10, 11, 12, 13, 14] },
+  { name: '中部', prefectures: [15, 16, 17, 18, 19, 20, 21, 22, 23] },
+  { name: '近畿', prefectures: [24, 25, 26, 27, 28, 29, 30] },
+  { name: '中国', prefectures: [31, 32, 33, 34, 35] },
+  { name: '四国', prefectures: [36, 37, 38, 39] },
+  { name: '九州', prefectures: [40, 41, 42, 43, 44, 45, 46, 47] }
+]
+
+// ランダムに地方を選択する関数
+export const getRandomRegions = (count: number): number[] => {
+  if (count <= 0 || count > regions.length) {
+    // 無効な数の場合は全都道府県を返す
+    return Array.from({length: 47}, (_, i) => i + 1)
+  }
+  
+  // 地方をランダムに選択
+  const shuffledRegions = [...regions].sort(() => Math.random() - 0.5)
+  const selectedRegions = shuffledRegions.slice(0, count)
+  
+  // 選択された地方の都道府県IDを結合
+  const selectedPrefectures = selectedRegions.flatMap(region => region.prefectures)
+  
+  return selectedPrefectures
+}

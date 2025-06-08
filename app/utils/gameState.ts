@@ -1,4 +1,4 @@
-import { Prefecture, prefectures } from '../data/prefectures'
+import { Prefecture, prefectures, getRandomRegions } from '../data/prefectures'
 
 export interface GameState {
   startTime: number | null
@@ -8,11 +8,35 @@ export interface GameState {
   totalTime: number
   isGameComplete: boolean
   score: number
+  targetPrefectures: number[]
+}
+
+// グローバルリセットコールバック管理
+let globalResetCallbacks: (() => void)[] = []
+
+export function registerGlobalResetCallback(callback: () => void): () => void {
+  globalResetCallbacks.push(callback)
+  return () => {
+    globalResetCallbacks = globalResetCallbacks.filter(cb => cb !== callback)
+  }
+}
+
+export function triggerGlobalReset() {
+  console.log('triggerGlobalReset called, callbacks:', globalResetCallbacks.length)
+  globalResetCallbacks.forEach((callback, index) => {
+    try {
+      console.log(`Executing reset callback ${index}`)
+      callback()
+    } catch (error) {
+      console.error(`Reset callback ${index} error:`, error)
+    }
+  })
 }
 
 class GameStateManager {
   private state: GameState
   private listeners: Set<(state: GameState) => void> = new Set()
+  private initialized = false
 
   constructor() {
     this.state = this.getInitialState()
@@ -20,6 +44,23 @@ class GameStateManager {
   }
 
   private getInitialState(): GameState {
+    // サーバーサイドでは window が存在しないため、クライアントサイドでのみ実行
+    let targetPrefectures: number[]
+
+    if (typeof window !== 'undefined') {
+      // クライアントサイドの場合のみURLパラメーターを取得
+      const urlParams = new URLSearchParams(window.location.search)
+      const regionCount = parseInt(urlParams.get('regions') || '0')
+
+      targetPrefectures = regionCount > 0
+        ? getRandomRegions(regionCount)
+        : Array.from({ length: 47 }, (_, i) => i + 1)
+    } else {
+      // サーバーサイドでは全都道府県を対象とする
+      targetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
+    }
+
+    const availablePrefectures = prefectures.filter(p => targetPrefectures.includes(p.id))
     return {
       startTime: null,
       endTime: null,
@@ -27,7 +68,29 @@ class GameStateManager {
       currentPrefecture: prefectures[Math.floor(Math.random() * prefectures.length)],
       totalTime: 0,
       isGameComplete: false,
-      score: 0
+      score: 0,
+      targetPrefectures
+    }
+  }
+
+  // クライアントサイドでURLパラメーターを再チェックして状態を更新する新しいメソッド
+  initializeFromURL() {
+    if (typeof window === 'undefined') return
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const regionCount = parseInt(urlParams.get('regions') || '0')
+
+    if (regionCount > 0) {
+      const targetPrefectures = getRandomRegions(regionCount)
+      const availablePrefectures = prefectures.filter(p => targetPrefectures.includes(p.id))
+
+      this.state = {
+        ...this.state,
+        targetPrefectures,
+        currentPrefecture: availablePrefectures[Math.floor(Math.random() * availablePrefectures.length)]
+      }
+
+      this.notifyListeners()
     }
   }
 
@@ -69,9 +132,16 @@ class GameStateManager {
   }
 
   private getRandomUnansweredPrefecture(answered: Set<number>): Prefecture {
-    const remaining = prefectures.filter(p => !answered.has(p.id))
-    if (remaining.length === 0) return prefectures[0]
-    return remaining[Math.floor(Math.random() * remaining.length)]
+    // 対象都道府県の中から未回答のものを選択
+    const availablePrefectures = prefectures.filter(p =>
+      this.state.targetPrefectures.includes(p.id) && !answered.has(p.id)
+    )
+
+    if (availablePrefectures.length === 0) {
+      return prefectures.find(p => this.state.targetPrefectures.includes(p.id)) || prefectures[0]
+    }
+
+    return availablePrefectures[Math.floor(Math.random() * availablePrefectures.length)]
   }
 
   // 修正: voidを返すunsubscribe関数に変更
@@ -93,41 +163,44 @@ class GameStateManager {
     }
   }
 
-// GameStateManagerクラスに追加
-answerCorrect(prefectureId: number, hintLevel: number = 0) {
-  const newAnswered = new Set(this.state.answeredPrefectures)
-  newAnswered.add(prefectureId)
-  
-  const isComplete = newAnswered.size === prefectures.length
-  const endTime = isComplete ? Date.now() : null
-  const totalTime = endTime && this.state.startTime ? endTime - this.state.startTime : 0
+  // GameStateManagerクラスに追加
+  answerCorrect(prefectureId: number, hintLevel: number = 0) {
+    const newAnswered = new Set(this.state.answeredPrefectures)
+    newAnswered.add(prefectureId)
 
-  let scoreIncrement = 10
-  if (hintLevel === 1) scoreIncrement = 8
-  else if (hintLevel === 2) scoreIncrement = 6
-  else if (hintLevel >= 3) scoreIncrement = 4
+    // 完了判定を対象都道府県数で行う
+    const isComplete = newAnswered.size === this.state.targetPrefectures.length
+    const endTime = isComplete ? Date.now() : null
+    const totalTime = endTime && this.state.startTime ? endTime - this.state.startTime : 0
 
-  this.state = {
-    ...this.state,
-    answeredPrefectures: newAnswered,
-    score: this.state.score + scoreIncrement,
-    isGameComplete: isComplete,
-    endTime,
-    totalTime
+    let scoreIncrement = 10
+    if (hintLevel === 1) scoreIncrement = 8
+    else if (hintLevel === 2) scoreIncrement = 6
+    else if (hintLevel >= 3) scoreIncrement = 4
+
+    this.state = {
+      ...this.state,
+      answeredPrefectures: newAnswered,
+      score: this.state.score + scoreIncrement,
+      isGameComplete: isComplete,
+      endTime,
+      totalTime
+    }
+
+    if (isComplete) {
+      saveGameRecord(this.state)
+    }
+
+    this.notifyListeners()
   }
-
-  // ゲーム完了時に記録を保存
-  if (isComplete) {
-    saveGameRecord(this.state)
-  }
-
-  this.notifyListeners()
-}
 
   getNextPrefecture(): Prefecture | null {
-    const remaining = prefectures.filter(p => !this.state.answeredPrefectures.has(p.id))
+    const remaining = prefectures.filter(p =>
+      this.state.targetPrefectures.includes(p.id) && !this.state.answeredPrefectures.has(p.id)
+    )
+
     if (remaining.length === 0) return null
-    
+
     const next = remaining[Math.floor(Math.random() * remaining.length)]
     this.state = { ...this.state, currentPrefecture: next }
     this.notifyListeners()
@@ -135,19 +208,45 @@ answerCorrect(prefectureId: number, hintLevel: number = 0) {
   }
 
   resetGame() {
+    console.log('GameStateManager.resetGame called')
     this.state = this.getInitialState()
     if (typeof window !== 'undefined') {
       localStorage.removeItem('gameState')
     }
+    
     this.notifyListeners()
+    
+    // グローバルリセットをトリガー
+    triggerGlobalReset()
   }
 
   getProgress() {
     const answered = this.state.answeredPrefectures.size
-    const total = prefectures.length
+    const total = this.state.targetPrefectures.length
     const percentage = Math.round((answered / total) * 100)
     return { answered, total, percentage }
   }
+  getTargetInfo() {
+    const targetPrefectureObjects = prefectures.filter(p =>
+      this.state.targetPrefectures.includes(p.id)
+    )
+
+    // 地方別にグループ化
+    const regionGroups = targetPrefectureObjects.reduce((groups, pref) => {
+      if (!groups[pref.region]) {
+        groups[pref.region] = []
+      }
+      groups[pref.region].push(pref.name)
+      return groups
+    }, {} as Record<string, string[]>)
+
+    return {
+      totalCount: this.state.targetPrefectures.length,
+      regions: Object.keys(regionGroups),
+      regionGroups
+    }
+  }
+  
 
   getElapsedTime(): number {
     if (!this.state.startTime) return 0
@@ -173,7 +272,7 @@ export function saveGameRecord(gameState: GameState) {
 
   const totalMinutes = gameState.totalTime / (1000 * 60)
   const wpm = Math.round(47 / totalMinutes)
-  
+
   const newRecord = {
     date: new Date().toISOString(),
     time: gameState.totalTime,
@@ -187,7 +286,7 @@ export function saveGameRecord(gameState: GameState) {
     const updatedRecords = [...existingRecords, newRecord]
       .sort((a, b) => a.time - b.time) // タイム順でソート
       .slice(0, 50) // 最大50件まで保存
-    
+
     localStorage.setItem('gameRecords', JSON.stringify(updatedRecords))
   } catch (error) {
     console.error('記録の保存に失敗:', error)

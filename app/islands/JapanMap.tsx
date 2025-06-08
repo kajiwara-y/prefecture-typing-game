@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useGameState } from '../hooks/useGameState'
+import { useGameState } from '../contexts/GameContext'
 
 // SVGキャッシュ用のグローバル変数
 let svgCache: string | null = null

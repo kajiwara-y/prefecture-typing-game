@@ -1,4 +1,4 @@
-import { useGameState } from '../hooks/useGameState'
+import { useGameState } from '../contexts/GameContext' 
 
 export default function GameControls() {
   const { resetGame, gameState, isClient } = useGameState()

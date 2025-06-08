@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react'
-import { useGameState } from '../hooks/useGameState'
+import { useGameState } from '../contexts/GameContext'
+import { getGameStateManager} from '../utils/gameState'
 
 export default function GameProgress() {
   const { gameState, getProgress, getElapsedTime, isClient } = useGameState()
   const [elapsedTime, setElapsedTime] = useState(0)
   const [wpm, setWpm] = useState(0) // Words Per Minute
-  const [accuracy, setAccuracy] = useState(100) // 正解率
   const progress = getProgress()
+
+  const getTargetInfo = () => {
+    const manager = getGameStateManager()
+    return manager.getTargetInfo()
+  }
+
+  const targetInfo = isClient ? getTargetInfo() : { totalCount: 47, regions: [], regionGroups: {} }
 
   useEffect(() => {
     if (!isClient) return
@@ -93,6 +100,18 @@ export default function GameProgress() {
           {formatTime(elapsedTime)}
         </div>
       </div>
+ 
+      {/* 対象地方の表示（47都道府県でない場合のみ） */}
+      {targetInfo.totalCount < 47 && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 className="text-sm font-semibold text-yellow-800 mb-2">
+            📍 今回の対象地方 ({targetInfo.regions.length}地方)
+          </h4>
+          <div className="text-xs text-yellow-700">
+            {targetInfo.regions.join('・')}
+          </div>
+        </div>
+      )}
       
       <div className="mb-4">
         <div className="flex justify-between text-sm text-gray-600 mb-2">
