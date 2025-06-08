@@ -1,6 +1,6 @@
-import { useGameState } from '../contexts/GameContext' 
+import { GameProvider, useGameState } from '../contexts/GameContext'
 
-export default function GameControls() {
+function GameControlsInner() {
   const { resetGame, gameState, isClient } = useGameState()
 
   const handleReset = () => {
@@ -34,5 +34,13 @@ export default function GameControls() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function GameControls() {
+  return (
+    <GameProvider>
+      <GameControlsInner />
+    </GameProvider>
   )
 }

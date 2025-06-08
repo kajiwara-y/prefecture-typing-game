@@ -1,7 +1,7 @@
-import { useGameState } from '../contexts/GameContext'
+import { GameProvider, useGameState } from '../contexts/GameContext'
 import { useState, useEffect } from 'react'
 
-export default function GameHeader() {
+function GameHeaderInner() {
   const { gameState, isClient } = useGameState()
   const [isVisible, setIsVisible] = useState(true)
   const [shouldRender, setShouldRender] = useState(true)
@@ -33,5 +33,14 @@ export default function GameHeader() {
     >
       都道府県タイピングゲーム
     </h1>
+  )
+}
+
+
+export default function GameHeader() {
+  return (
+    <GameProvider>
+      <GameHeaderInner />
+    </GameProvider>
   )
 }
