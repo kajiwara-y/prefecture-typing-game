@@ -80,8 +80,13 @@ export const getRandomRegions = (count: number): number[] => {
     return Array.from({length: 47}, (_, i) => i + 1)
   }
   
+  // 1地方選択の場合は北海道を除外
+  const availableRegions = count === 1 
+    ? regions.filter(region => region.name !== '北海道')
+    : regions
+  
   // 地方をランダムに選択
-  const shuffledRegions = [...regions].sort(() => Math.random() - 0.5)
+  const shuffledRegions = [...availableRegions].sort(() => Math.random() - 0.5)
   const selectedRegions = shuffledRegions.slice(0, count)
   
   // 選択された地方の都道府県IDを結合
