@@ -257,7 +257,7 @@ function TypingInputInner() {
   // プレースホルダーテキストを動的に生成
   const getPlaceholder = (): string => {
     if (isTypingPractice) {
-      const result = `${targetPrefecture.kana} / (${targetPrefecture.name} と入力してください`;
+      const result = `${targetPrefecture.kana} / ${targetPrefecture.name} と入力してください`;
       return result;
     }
     return "例: とうきょう / 東京";
@@ -274,37 +274,27 @@ function TypingInputInner() {
     return `${baseStyle} border-gray-300 focus:border-blue-500`;
   };
 
-  // リスタート処理関数を追加
+  // リスタート処理関数を修正
   const handleRestart = (keepRegionMode: boolean) => {
     if (!isClient) return;
-
-    const scrollPosition = window.scrollY;
 
     // LocalStorageをクリア
     localStorage.removeItem("gameState");
 
     if (keepRegionMode) {
-      // 地方ランダムモード継続：現在のURLパラメーターを維持してリセット
-      resetGame();
+      // 地方ランダムモード継続：現在のパスから地方数を取得して新しい地方を選択
+      const path = window.location.pathname;
+      const regionMatch = path.match(/^\/region\/(\d+)$/);
+      if (regionMatch) {
+        // 同じ地方数で新しいランダム地方を選択（リロードで実現）
+        window.location.reload();
+      } else {
+        resetGame();
+      }
     } else {
-      // 全県モードに切り替え：URLパラメーターを削除してリセット
-      const url = new URL(window.location.href);
-      url.searchParams.delete("regions");
-      window.history.replaceState({}, "", url.toString());
-
-      // GameStateManagerに全県モードを強制設定
-      const manager = getGameStateManager();
-      manager.forceSetTargetPrefectures(
-        Array.from({ length: 47 }, (_, i) => i + 1)
-      );
-      resetGame();
+      // 全県モードに切り替え：ルートパスに移動
+      window.location.href = '/';
     }
-
-    setCorrectCount(0);
-
-    setTimeout(() => {
-      window.scrollTo(0, scrollPosition);
-    }, 100);
   };
 
   // getTargetInfo関数を追加（地方情報取得用）

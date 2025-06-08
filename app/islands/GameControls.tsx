@@ -28,27 +28,20 @@ function GameControlsInner() {
       localStorage.removeItem('gameState')
       
       if (keepRegionMode) {
-        // 地方ランダムモード継続：現在のURLパラメーターを維持してリセット
-        resetGame()
+        // 地方ランダムモード継続：現在のパスから地方数を取得して新しい地方を選択
+        const path = window.location.pathname
+        const regionMatch = path.match(/^\/region\/(\d+)$/)
+        if (regionMatch) {
+          const regionCount = parseInt(regionMatch[1])
+          // 同じ地方数で新しいランダム地方を選択（リロードで実現）
+          window.location.reload()
+        } else {
+          resetGame()
+        }
       } else {
-        // 全県モードに切り替え：URLパラメーターを削除してリセット
-        const url = new URL(window.location.href)
-        url.searchParams.delete('regions')
-        window.history.replaceState({}, '', url.toString())
-        
-        // GameStateManagerに全県モードを強制設定
-        const manager = getGameStateManager()
-        manager.forceSetTargetPrefectures(Array.from({length: 47}, (_, i) => i + 1))
-        resetGame()
+        // 全県モードに切り替え：ルートパスに移動
+        window.location.href = '/'
       }
-      
-      // スクロール位置を復元
-      requestAnimationFrame(() => {
-        window.scrollTo({
-          top: scrollPosition,
-          behavior: 'smooth'
-        })
-      })
     }
   }
 
