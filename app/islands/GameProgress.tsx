@@ -160,7 +160,6 @@ function GameProgressInner() {
         </div>
       </div>
 
-      {/* 既存のスコア表示部分はそのまま */}
       <div className="grid grid-cols-2 gap-4 text-center mb-4">
         <div className="bg-white p-3 rounded-lg">
           <div className="text-2xl font-bold text-green-600">{gameState.score}</div>
@@ -172,7 +171,6 @@ function GameProgressInner() {
         </div>
       </div>
 
-      {/* 既存の詳細統計部分はそのまま */}
       {gameState.startTime && (
         <div className="grid grid-cols-2 gap-2 text-center mb-4">
           <div className="bg-white p-2 rounded-lg">
@@ -188,7 +186,6 @@ function GameProgressInner() {
         </div>
       )}
 
-      {/* 既存の予想完了時間部分はそのまま */}
       {gameState.startTime && progress.answered > 0 && !gameState.isGameComplete && (
         <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
           <div className="text-center">
@@ -203,7 +200,7 @@ function GameProgressInner() {
           <div className="text-center">
             <div className="text-2xl mb-2">🎉 おめでとうございます！</div>
             <div className="text-lg font-bold text-green-800">
-                          {isExpertMode 
+              {isExpertMode 
                 ? "エキスパートモード制覇！" 
                 : targetInfo.totalCount < 47 ? "地方制覇！" : "全都道府県制覇！"
               } 
