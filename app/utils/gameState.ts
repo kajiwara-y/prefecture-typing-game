@@ -88,24 +88,23 @@ class GameStateManager {
       if (saved) {
         const parsed = JSON.parse(saved)
         
-        // URLパラメーターと保存された状態の整合性をチェック
+        // URLパラメーターを確認
         const urlParams = new URLSearchParams(window.location.search)
         const regionCount = parseInt(urlParams.get('regions') || '0')
         
-        let expectedTargetPrefectures: number[]
+        // URLパラメーターがある場合
         if (regionCount > 0) {
-          // URLパラメーターがある場合は、保存された状態を使わずに新しく生成
-          expectedTargetPrefectures = getRandomRegions(regionCount)
-        } else {
-          expectedTargetPrefectures = Array.from({ length: 47 }, (_, i) => i + 1)
-        }
-        
-        // URLパラメーターがある場合は保存された状態を無視
-        if (regionCount > 0) {
-          console.log('loadFromStorage - ignoring saved state due to URL params')
+          console.log('loadFromStorage - URL params detected, ignoring saved state')
           return
         }
         
+        // URLパラメーターがない場合、保存された状態が地方モードなら無視
+        if (parsed.targetPrefectures && parsed.targetPrefectures.length < 47) {
+          console.log('loadFromStorage - saved state is region mode but no URL params, ignoring')
+          return
+        }
+        
+        // 全県モードの保存状態のみ復元
         this.state = {
           ...parsed,
           answeredPrefectures: new Set(parsed.answeredPrefectures),
@@ -289,7 +288,32 @@ class GameStateManager {
     if (this.state.endTime) return this.state.totalTime
     return Date.now() - this.state.startTime
   }
+
+  //対象都道府県を強制設定するメソッド
+  forceSetTargetPrefectures(targetPrefectures: number[]) {
+    console.log('forceSetTargetPrefectures called with:', targetPrefectures)
+    
+    const availablePrefectures = prefectures.filter(p => targetPrefectures.includes(p.id))
+    const firstPrefecture = availablePrefectures[Math.floor(Math.random() * availablePrefectures.length)]
+
+    this.state = {
+      ...this.state,
+      targetPrefectures,
+      currentPrefecture: firstPrefecture,
+      answeredPrefectures: new Set<number>(),
+      startTime: null,
+      endTime: null,
+      totalTime: 0,
+      isGameComplete: false,
+      score: 0
+    }
+    
+    this.notifyListeners()
+  }
+
 }
+
+
 
 
 

@@ -166,7 +166,7 @@ function GameProgressInner() {
           <div className="text-center">
             <div className="text-2xl mb-2">🎉 おめでとうございます！</div>
             <div className="text-lg font-bold text-green-800">
-              全都道府県制覇！
+               {targetInfo.totalCount < 47 ? "地方制覇！" : "全都道府県制覇！"} 
             </div>
             <div className="text-sm text-green-700 mt-1">
               完了時間: {formatTime(gameState.totalTime)}
