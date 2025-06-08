@@ -24,7 +24,7 @@ function JapanMapInner() {
       return svgLoadPromise
     }
 
-    svgLoadPromise = fetch('./map-full.svg')
+    svgLoadPromise = fetch('/map-full.svg')
       .then(res => {
         if (!res.ok) {
           throw new Error('SVGファイルの読み込みに失敗しました')

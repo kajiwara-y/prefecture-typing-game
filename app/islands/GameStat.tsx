@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { GameProvider, useGameState } from '../contexts/GameContext'
+import { getGameStateManager } from '../utils/gameState'
 
 interface GameRecord {
   date: string
@@ -6,12 +8,16 @@ interface GameRecord {
   score: number
   wpm: number // Words Per Minute
   accuracy: number // 正解率
+  mode: string // 追加: ゲームモード
+  totalPrefectures: number // 追加: 対象都道府県数
 }
 
-export default function GameStats() {
+function GameStatsInner() {
+  const { gameState, isClient } = useGameState()
   const [records, setRecords] = useState<GameRecord[]>([])
   const [showStats, setShowStats] = useState(false)
   const [sortBy, setSortBy] = useState<'time' | 'score' | 'wpm'>('time')
+  const [filterMode, setFilterMode] = useState<'all' | 'region' | 'full'>('all')
 
   useEffect(() => {
     const savedRecords = JSON.parse(localStorage.getItem('gameRecords') || '[]')
@@ -31,7 +37,19 @@ export default function GameStats() {
     }
   }
 
-    const sortedRecords = [...records].sort((a, b) => {
+  const getTargetInfo = () => {
+    const manager = getGameStateManager()
+    return manager.getTargetInfo()
+  }
+
+  const filteredRecords = records.filter(record => {
+    if (filterMode === 'all') return true
+    if (filterMode === 'region') return record.totalPrefectures < 47
+    if (filterMode === 'full') return record.totalPrefectures === 47
+    return true
+  })
+
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
     switch (sortBy) {
       case 'time':
         return a.time - b.time
@@ -45,15 +63,15 @@ export default function GameStats() {
   })
 
   const getBestRecord = (field: keyof GameRecord) => {
-    if (records.length === 0) return null
+    if (filteredRecords.length === 0) return null
     
     switch (field) {
       case 'time':
-        return Math.min(...records.map(r => r.time))
+        return Math.min(...filteredRecords.map(r => r.time))
       case 'score':
-        return Math.max(...records.map(r => r.score))
+        return Math.max(...filteredRecords.map(r => r.score))
       case 'wpm':
-        return Math.max(...records.map(r => r.wpm))
+        return Math.max(...filteredRecords.map(r => r.wpm))
       default:
         return null
     }
@@ -104,8 +122,46 @@ export default function GameStats() {
         </div>
       </div>
 
-      {/* ベスト記録サマリー */}
+      {/* フィルター選択 */}
       {records.length > 0 && (
+        <div className="mb-4">
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={() => setFilterMode('all')}
+              className={`px-3 py-1 rounded text-sm ${
+                filterMode === 'all' 
+                  ? 'bg-gray-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              全記録
+            </button>
+            <button
+              onClick={() => setFilterMode('full')}
+              className={`px-3 py-1 rounded text-sm ${
+                filterMode === 'full' 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              全県モード
+            </button>
+            <button
+              onClick={() => setFilterMode('region')}
+              className={`px-3 py-1 rounded text-sm ${
+                filterMode === 'region' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              地方モード
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ベスト記録サマリー */}
+      {filteredRecords.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-yellow-100 border border-yellow-300 p-3 rounded-lg text-center">
             <div className="text-sm text-yellow-800">最速タイム</div>
@@ -129,7 +185,7 @@ export default function GameStats() {
       )}
 
       {/* ソート選択 */}
-      {records.length > 1 && (
+      {filteredRecords.length > 1 && (
         <div className="mb-4">
           <div className="flex gap-2">
             <button
@@ -166,9 +222,12 @@ export default function GameStats() {
         </div>
       )}
 
-      {records.length === 0 ? (
+      {filteredRecords.length === 0 ? (
         <p className="text-gray-500 text-center py-4">
-          まだ記録がありません。ゲームをプレイして記録を作りましょう！
+          {filterMode === 'all' 
+            ? 'まだ記録がありません。ゲームをプレイして記録を作りましょう！'
+            : `${filterMode === 'full' ? '全県モード' : '地方モード'}の記録がありません。`
+          }
         </p>
       ) : (
         <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -203,6 +262,12 @@ export default function GameStats() {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {record.mode || (record.totalPrefectures === 47 ? '全県モード' : '地方モード')}
+                      {record.totalPrefectures && record.totalPrefectures < 47 && 
+                        ` (${record.totalPrefectures}都道府県)`
+                      }
                     </div>
                   </div>
                 </div>
@@ -239,22 +304,30 @@ export default function GameStats() {
       )}
       
       {/* 統計情報 */}
-      {records.length > 0 && (
+      {filteredRecords.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-600">プレイ回数:</span>
-              <span className="font-semibold ml-2">{records.length}回</span>
+              <span className="font-semibold ml-2">{filteredRecords.length}回</span>
             </div>
             <div>
               <span className="text-gray-600">平均タイム:</span>
               <span className="font-semibold ml-2">
-                {formatTime(records.reduce((sum, r) => sum + r.time, 0) / records.length)}
+                {formatTime(filteredRecords.reduce((sum, r) => sum + r.time, 0) / filteredRecords.length)}
               </span>
             </div>
           </div>
         </div>
       )}
     </div>
+  )
+}
+
+export default function GameStats() {
+  return (
+    <GameProvider>
+      <GameStatsInner />
+    </GameProvider>
   )
 }

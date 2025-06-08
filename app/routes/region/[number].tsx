@@ -1,19 +1,27 @@
 import { createRoute } from 'honox/factory'
-import JapanMap from '../islands/JapanMap'
-import TypingInput from '../islands/TypingInput'
-import GameHeader from '../islands/GameHeader'      
-import GameProgress from '../islands/GameProgress'
-import GameControls from '../islands/GameControls'
+import JapanMap from '../../islands/JapanMap'
+import TypingInput from '../../islands/TypingInput'
+import GameHeader from '../../islands/GameHeader'      
+import GameProgress from '../../islands/GameProgress'
+import GameControls from '../../islands/GameControls'
 
 export default createRoute((c) => {
+  const numberParam = c.req.param('number')
+  const number = parseInt(numberParam || '0')
+  
+  // バリデーション：1-7以外は全県モードにリダイレクト
+  if (!numberParam || number < 1 || number > 7 || isNaN(number)) {
+    return c.redirect('/')
+  }
+  
   return c.render(
     <div className="game-container max-w-7xl mx-auto bg-white rounded-2xl p-8 shadow-xl">
       <GameHeader />
       
-      {/* 全県モード表示 */}
+      {/* 地方モード表示 */}
       <div className="mb-6 text-center">
-        <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-          🗾 全47都道府県モード
+        <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+          🎯 {number}地方ランダムモード
         </div>
       </div>
       
