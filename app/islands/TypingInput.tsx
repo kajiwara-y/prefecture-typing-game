@@ -308,7 +308,7 @@ function TypingInputInner() {
     const isRegionMode = gameState.targetPrefectures.length < 47;
 
     return (
-      <div className="typing-container">
+<div className="typing-container">
         <div className="text-center p-8">
           <h2 className="text-3xl font-bold text-green-600 mb-4">
             🎊 {isExpertMode ? "エキスパートモード制覇！" : isRegionMode ? "地方制覇！" : "全都道府県制覇！"} 🎊
@@ -337,10 +337,21 @@ function TypingInputInner() {
               <div className="text-xs text-gray-500 mt-2">
                 エキスパートモード: 形状認識チャレンジ
               </div>
+              
+              {/* 通常モードに戻る選択肢 */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <a
+                  href="/"
+                  className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                >
+                  🗾 通常モードに戻る
+                </a>
+              </div>
             </div>
           ) : (
-            /* 通常モードの既存ボタン */
+            /* 通常モードの場合 */
             <>
+              {/* 47都道府県完全制覇の場合はエキスパートモードへの誘導を表示 */}
               {isRegionMode ? (
                 <div className="space-y-3">
                   <button
@@ -362,13 +373,36 @@ function TypingInputInner() {
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => handleRestart(false)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
-                  disabled={!isClient}
-                >
-                  もう一度挑戦する
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => handleRestart(false)}
+                    className="block w-full bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                    disabled={!isClient}
+                  >
+                    もう一度挑戦する
+                  </button>
+                  
+                  {/* 47都道府県制覇後の追加オプション */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600 mb-3">
+                      他のモードも試してみませんか？
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <a
+                        href="/region/3"
+                        className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold text-sm text-center transition-colors"
+                      >
+                        🎲 地方ランダムモード
+                      </a>
+                      <a
+                        href="/expert"
+                        className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold text-sm text-center transition-colors"
+                      >
+                        🎓 エキスパートモード
+                      </a>
+                    </div>
+                  </div>
+                </div>
               )}
             </>
           )}
