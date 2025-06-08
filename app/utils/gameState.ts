@@ -337,21 +337,31 @@ export function saveGameRecord(gameState: GameState) {
   if (typeof window === 'undefined' || !gameState.isGameComplete) return
 
   const totalMinutes = gameState.totalTime / (1000 * 60)
-  const wpm = Math.round(gameState.targetPrefectures.length / totalMinutes) // 修正: 実際の問題数を使用
+  const wpm = Math.round(gameState.targetPrefectures.length / totalMinutes)
+
+  // 地方情報を取得
+  const manager = getGameStateManager()
+  const targetInfo = manager.getTargetInfo()
+  
+  const modeDescription = gameState.targetPrefectures.length === 47 
+    ? '全県モード' 
+    : `${targetInfo.regions.join('・')}地方モード`
 
   const newRecord = {
     date: new Date().toISOString(),
     time: gameState.totalTime,
     score: gameState.score,
     wpm: isFinite(wpm) ? wpm : 0,
-    accuracy: 100
+    accuracy: 100,
+    mode: modeDescription, // 追加
+    totalPrefectures: gameState.targetPrefectures.length // 追加
   }
 
   try {
     const existingRecords = JSON.parse(localStorage.getItem('gameRecords') || '[]')
     const updatedRecords = [...existingRecords, newRecord]
       .sort((a, b) => a.time - b.time)
-      .slice(0, 50)
+      .slice(0, 50) // 最大50件まで保存
 
     localStorage.setItem('gameRecords', JSON.stringify(updatedRecords))
   } catch (error) {
