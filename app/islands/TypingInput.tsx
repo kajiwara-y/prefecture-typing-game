@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { GameProvider, useGameState } from '../contexts/GameContext'
+import { GameProvider, useGameState } from "../contexts/GameContext";
 import { useScrollPreservation } from "../hooks/useScrollPreservation";
-import { registerGlobalResetCallback } from '../utils/gameState'
+import {
+  getGameStateManager,
+  registerGlobalResetCallback,
+} from "../utils/gameState";
 
 function TypingInputInner() {
   const {
     gameState,
-    resetTrigger,
     startGame,
     answerCorrect,
     getNextPrefecture,
@@ -75,8 +77,6 @@ function TypingInputInner() {
       }
     };
 
-    
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [
@@ -90,32 +90,32 @@ function TypingInputInner() {
 
   // グローバルリセットコールバックを登録（Context のresetTriggerの代わり）
   useEffect(() => {
-    if (!isClient) return
+    if (!isClient) return;
 
-    console.log('TypingInput - Registering global reset callback')
-    
+    console.log("TypingInput - Registering global reset callback");
+
     const resetCallback = () => {
-      console.log('TypingInput - Global reset callback executed')
-      
-      setInput('')
-      setCorrectCount(0) // これが重要！
-      setFeedback('')
-      setIsCorrect(false)
-      setShowAnswer(false)
-      setIsTypingPractice(false)
-      setHintLevel(0)
-      
+      console.log("TypingInput - Global reset callback executed");
+
+      setInput("");
+      setCorrectCount(0); // これが重要！
+      setFeedback("");
+      setIsCorrect(false);
+      setShowAnswer(false);
+      setIsTypingPractice(false);
+      setHintLevel(0);
+
       setTimeout(() => {
         if (inputRef.current) {
-          inputRef.current.focus()
-          inputRef.current.value = ''
+          inputRef.current.focus();
+          inputRef.current.value = "";
         }
-      }, 100)
-    }
+      }, 100);
+    };
 
-    const unregister = registerGlobalResetCallback(resetCallback)
-    return unregister
-  }, [isClient])
+    const unregister = registerGlobalResetCallback(resetCallback);
+    return unregister;
+  }, [isClient]);
 
   const goToNextQuestion = () => {
     preserveScrollDuring(() => {
@@ -274,38 +274,94 @@ function TypingInputInner() {
     return `${baseStyle} border-gray-300 focus:border-blue-500`;
   };
 
+  // リスタート処理関数を追加
+  const handleRestart = (keepRegionMode: boolean) => {
+    if (!isClient) return;
+
+    const scrollPosition = window.scrollY;
+
+    // LocalStorageをクリア
+    localStorage.removeItem("gameState");
+
+    if (keepRegionMode) {
+      // 地方ランダムモード継続：現在のURLパラメーターを維持してリセット
+      resetGame();
+    } else {
+      // 全県モードに切り替え：URLパラメーターを削除してリセット
+      const url = new URL(window.location.href);
+      url.searchParams.delete("regions");
+      window.history.replaceState({}, "", url.toString());
+
+      // GameStateManagerに全県モードを強制設定
+      const manager = getGameStateManager();
+      manager.forceSetTargetPrefectures(
+        Array.from({ length: 47 }, (_, i) => i + 1)
+      );
+      resetGame();
+    }
+
+    setCorrectCount(0);
+
+    setTimeout(() => {
+      window.scrollTo(0, scrollPosition);
+    }, 100);
+  };
+
+  // getTargetInfo関数を追加（地方情報取得用）
+  const getTargetInfo = () => {
+    const manager = getGameStateManager();
+    return manager.getTargetInfo();
+  };
+
   if (gameState.isGameComplete) {
+    const isRegionMode = gameState.targetPrefectures.length < 47;
+
     return (
       <div className="typing-container">
         <div className="text-center p-8">
           <h2 className="text-3xl font-bold text-green-600 mb-4">
-            🎊 全都道府県制覇！ 🎊
+            🎊 {isRegionMode ? "地方制覇！" : "全都道府県制覇！"} 🎊
           </h2>
           <p className="text-lg text-gray-700 mb-2">
-            素晴らしい！全ての都道府県を覚えましたね！
+            {isRegionMode
+              ? `素晴らしい！${gameState.targetPrefectures.length}都道府県を覚えましたね！`
+              : "素晴らしい！全ての都道府県を覚えましたね！"}
           </p>
           <p className="text-md text-gray-600 mb-6">
             最終スコア: {gameState.score}点
           </p>
-          <button
-            onClick={() => {
-              if (isClient) {
-                const scrollPosition = window.scrollY;
-                // localStorage をクリアしてからリセット
-                localStorage.removeItem("gameState");
 
-                resetGame(); 
-                setCorrectCount(0);
-                setTimeout(() => {
-                  window.scrollTo(0, scrollPosition);
-                }, 100);
-              }
-            }}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
-            disabled={!isClient}
-          >
-            もう一度挑戦する
-          </button>
+          {/* 地方ランダムモードの場合は2つのボタン */}
+          {isRegionMode ? (
+            <div className="space-y-3">
+              <button
+                onClick={() => handleRestart(true)} // 地方ランダムモード継続
+                className="block w-full bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                disabled={!isClient}
+              >
+                🎲 別の地方でもう一度挑戦
+              </button>
+              <button
+                onClick={() => handleRestart(false)} // 全県モードに切り替え
+                className="block w-full bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+                disabled={!isClient}
+              >
+                🗾 全47都道府県に挑戦
+              </button>
+              <div className="text-xs text-gray-500 mt-2">
+                現在: {getTargetInfo().regions.join("・")}地方モード
+              </div>
+            </div>
+          ) : (
+            /* 全県モードの場合は1つのボタン */
+            <button
+              onClick={() => handleRestart(false)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg"
+              disabled={!isClient}
+            >
+              もう一度挑戦する
+            </button>
+          )}
         </div>
       </div>
     );
@@ -533,5 +589,5 @@ export default function TypingInput() {
     <GameProvider>
       <TypingInputInner />
     </GameProvider>
-  )
+  );
 }
