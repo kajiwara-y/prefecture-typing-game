@@ -25,7 +25,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsClient(true)
     const manager = getGameStateManager()
     
-    manager.initializeFromURL() // 修正: 追加
+    // パスベースでのモード初期化
+    manager.initializeFromPath()
     setGameState(manager.getState())
     
     const unsubscribe = manager.subscribe((newState) => {
@@ -38,9 +39,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const manager = getGameStateManager()
 
   const handleResetGame = () => {
+    console.log('GameProvider - handleResetGame called')
     manager.resetGame()
     setResetTrigger(prev => {
       const newValue = prev + 1
+      console.log('GameProvider - resetTrigger updated to:', newValue)
       return newValue
     })
   }
