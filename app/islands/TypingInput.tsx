@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { GameProvider, useGameState } from '../contexts/GameContext'
 import { useScrollPreservation } from "../hooks/useScrollPreservation";
+import { registerGlobalResetCallback } from '../utils/gameState'
 
 function TypingInputInner() {
   const {
@@ -87,15 +88,17 @@ function TypingInputInner() {
     isClient,
   ]);
 
-  // resetTriggerの監視を追加
+  // グローバルリセットコールバックを登録（Context のresetTriggerの代わり）
   useEffect(() => {
-    console.log('TypingInput - resetTrigger changed:', resetTrigger)
+    if (!isClient) return
+
+    console.log('TypingInput - Registering global reset callback')
     
-    if (resetTrigger > 0) {
-      console.log('TypingInput - Resetting state via resetTrigger')
+    const resetCallback = () => {
+      console.log('TypingInput - Global reset callback executed')
       
       setInput('')
-      setCorrectCount(0)
+      setCorrectCount(0) // これが重要！
       setFeedback('')
       setIsCorrect(false)
       setShowAnswer(false)
@@ -109,7 +112,10 @@ function TypingInputInner() {
         }
       }, 100)
     }
-  }, [resetTrigger])
+
+    const unregister = registerGlobalResetCallback(resetCallback)
+    return unregister
+  }, [isClient])
 
   const goToNextQuestion = () => {
     preserveScrollDuring(() => {
