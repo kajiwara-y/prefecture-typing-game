@@ -107,8 +107,18 @@ function GameProgressInner() {
           <h4 className="text-sm font-semibold text-yellow-800 mb-2">
             📍 今回の対象地方 ({targetInfo.regions.length}地方)
           </h4>
-          <div className="text-xs text-yellow-700">
-            {targetInfo.regions.join('・')}
+          <div className="text-xs text-yellow-700 space-y-1">
+            {targetInfo.regions.map((region, index) => (
+              <div key={region} className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span>{region}地方</span>
+                {targetInfo.regionGroups[region] && (
+                  <span className="text-yellow-600">
+                    ({targetInfo.regionGroups[region].length}都道府県)
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -172,7 +182,7 @@ function GameProgressInner() {
               完了時間: {formatTime(gameState.totalTime)}
             </div>
             <div className="text-sm text-green-700">
-              平均: {formatTime(gameState.totalTime / 47)}/問
+              平均: {formatTime(gameState.totalTime / targetInfo.totalCount)}/問
             </div>
           </div>
         </div>
@@ -180,6 +190,7 @@ function GameProgressInner() {
     </div>
   )
 }
+
 export default function GameProgress() {
   return (
     <GameProvider>
