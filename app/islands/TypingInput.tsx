@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { useGameState } from '../contexts/GameContext' // 修正: Contextから取得
+import { GameProvider, useGameState } from '../contexts/GameContext'
 import { useScrollPreservation } from "../hooks/useScrollPreservation";
 
-export default function TypingInput() {
+function TypingInputInner() {
   const {
     gameState,
     resetTrigger,
@@ -89,10 +89,10 @@ export default function TypingInput() {
 
   // resetTriggerの監視を追加
   useEffect(() => {
-    console.log('TypingInput - resetTrigger changed:', resetTrigger) // デバッグ用
+    console.log('TypingInput - resetTrigger changed:', resetTrigger)
     
     if (resetTrigger > 0) {
-      console.log('TypingInput - Resetting state via resetTrigger') // デバッグ用
+      console.log('TypingInput - Resetting state via resetTrigger')
       
       setInput('')
       setCorrectCount(0)
@@ -517,4 +517,12 @@ export default function TypingInput() {
       )}
     </div>
   );
+}
+
+export default function TypingInput() {
+  return (
+    <GameProvider>
+      <TypingInputInner />
+    </GameProvider>
+  )
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useGameState } from '../contexts/GameContext'
+import { GameProvider, useGameState } from '../contexts/GameContext'
 import { getGameStateManager} from '../utils/gameState'
 
-export default function GameProgress() {
+function GameProgressInner() {
   const { gameState, getProgress, getElapsedTime, isClient } = useGameState()
   const [elapsedTime, setElapsedTime] = useState(0)
   const [wpm, setWpm] = useState(0) // Words Per Minute
@@ -178,5 +178,12 @@ export default function GameProgress() {
         </div>
       )}
     </div>
+  )
+}
+export default function GameProgress() {
+  return (
+    <GameProvider>
+      <GameProgressInner />
+    </GameProvider>
   )
 }

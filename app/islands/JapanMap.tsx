@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { useGameState } from '../contexts/GameContext'
+import { GameProvider, useGameState } from '../contexts/GameContext'
 
 // SVGキャッシュ用のグローバル変数
 let svgCache: string | null = null
 let svgLoadPromise: Promise<string> | null = null
 
-export default function JapanMap() {
+function JapanMapInner() {
   const { gameState, isClient } = useGameState()
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -235,5 +235,13 @@ export default function JapanMap() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function JapanMap() {
+  return (
+    <GameProvider>
+      <JapanMapInner />
+    </GameProvider>
   )
 }
