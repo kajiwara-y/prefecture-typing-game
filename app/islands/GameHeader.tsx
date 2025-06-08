@@ -1,4 +1,4 @@
-import { useGameState } from '../hooks/useGameState'
+import { useGameState } from '../contexts/GameContext'
 import { useState, useEffect } from 'react'
 
 export default function GameHeader() {
