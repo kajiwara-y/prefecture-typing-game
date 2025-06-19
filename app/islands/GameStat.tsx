@@ -20,8 +20,20 @@ function GameStatsInner() {
   const [filterMode, setFilterMode] = useState<'all' | 'region' | 'full'>('all')
 
   useEffect(() => {
-    const savedRecords = JSON.parse(localStorage.getItem('gameRecords') || '[]')
-    setRecords(savedRecords.sort((a: GameRecord, b: GameRecord) => a.time - b.time))
+    try {
+      const savedRecords = JSON.parse(localStorage.getItem('gameRecords') || '[]')
+      setRecords(savedRecords.sort((a: GameRecord, b: GameRecord) => a.time - b.time))
+    } catch (error) {
+      console.error('記録の読み込みに失敗:', error)
+      // LocalStorageの読み取りに失敗した場合、データをクリアして再読み込み
+      try {
+        localStorage.removeItem('gameRecords')
+        localStorage.removeItem('gameState')
+        window.location.reload()
+      } catch (e) {
+        console.error('LocalStorageのクリアに失敗:', e)
+      }
+    }
   }, [])
 
   const formatTime = (ms: number): string => {

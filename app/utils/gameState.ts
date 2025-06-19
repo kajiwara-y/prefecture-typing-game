@@ -136,6 +136,21 @@ class GameStateManager {
       }
     } catch (error) {
       console.error('ゲーム状態の復元に失敗:', error)
+      // LocalStorageの読み取りに失敗した場合、データをクリアしてページを再読み込み
+      this.clearStorageAndReload()
+    }
+  }
+
+  // LocalStorageをクリアしてページを再読み込みする
+  private clearStorageAndReload() {
+    if (typeof window === 'undefined') return
+    
+    try {
+      console.log('データ形式の不一致を検出。LocalStorageをクリアして再読み込みします')
+      localStorage.removeItem('gameState')
+      window.location.reload()
+    } catch (error) {
+      console.error('LocalStorageのクリアに失敗:', error)
     }
   }
 
@@ -366,5 +381,11 @@ export function saveGameRecord(gameState: GameState) {
     localStorage.setItem('gameRecords', JSON.stringify(updatedRecords))
   } catch (error) {
     console.error('記録の保存に失敗:', error)
+    // 記録の保存に失敗した場合はLocalStorageをクリア
+    try {
+      localStorage.removeItem('gameRecords')
+    } catch (e) {
+      console.error('LocalStorageのクリアに失敗:', e)
+    }
   }
 }
